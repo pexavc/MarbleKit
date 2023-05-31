@@ -2,8 +2,8 @@
 //  UIDevice.swift
 //  Wonder
 //
-//  Created by 0xKala on 4/20/20.
-//  Copyright © 2020 0xKala. All rights reserved.
+//  Created by PEXAVC on 4/20/20.
+//  Copyright © 2020 PEXAVC. All rights reserved.
 //
 
 import Foundation

@@ -2,8 +2,8 @@
 //  MetalView.swift
 //  Wonder
 //
-//  Created by 0xKala on 8/13/19.
-//  Copyright © 2019 0xKala. All rights reserved.
+//  Created by PEXAVC on 8/13/19.
+//  Copyright © 2019 PEXAVC. All rights reserved.
 //
 
 import Foundation
@@ -307,7 +307,7 @@ open class MetalView: MarbleBaseView {
     open override func scrollWheel(with event: NSEvent) {
         gestures.updateScroll(.init(deltaX: event.deltaX, deltaY: event.deltaY, deltaZ: event.deltaZ, state: event.phase == .began ? .began : (event.phase == .changed ? .changed : .ended)))
         
-        gestures.delegate?.gesturesUpdated()
+        gestures.delegate?.gesturesUpdated(.init(pan: .init(), scale: .init(pinch: .init(), scale: .infinity), rotate: .init(), scroll: .init(deltaX: .infinity, deltaY: .infinity, deltaZ: .infinity, state: .began)))
     }
     
     

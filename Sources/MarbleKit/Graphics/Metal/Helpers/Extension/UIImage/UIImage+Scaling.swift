@@ -2,8 +2,8 @@
 //  UIImage+Scaling.swift
 //  Wonder
 //
-//  Created by 0xKala on 8/18/19.
-//  Copyright © 2019 0xKala. All rights reserved.
+//  Created by PEXAVC on 8/18/19.
+//  Copyright © 2019 PEXAVC. All rights reserved.
 //
 
 import Foundation

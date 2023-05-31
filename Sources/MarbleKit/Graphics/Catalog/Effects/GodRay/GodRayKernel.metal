@@ -2,8 +2,8 @@
 //  BlurKernel.metal
 //  Wonder
 //
-//  Created by 0xKala on 3/28/20.
-//  Copyright © 2020 0xKala. All rights reserved.
+//  Created by PEXAVC on 3/28/20.
+//  Copyright © 2020 PEXAVC. All rights reserved.
 //
 #include <metal_stdlib>
 using namespace metal;

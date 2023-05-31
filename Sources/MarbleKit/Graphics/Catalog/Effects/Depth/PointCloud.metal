@@ -2,7 +2,7 @@
 //  PointCloud.metal
 //  Marble
 //
-//  Created by 0xKala on 8/9/20.
+//  Created by PEXAVC on 8/9/20.
 //  Copyright © 2020 Linen & Sole. All rights reserved.
 //
 

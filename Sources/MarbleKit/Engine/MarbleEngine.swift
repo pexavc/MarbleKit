@@ -2,13 +2,18 @@
 //  MarbleEngine.swift
 //  Marble
 //
-//  Created by 0xKala on 8/8/20.
+//  Created by PEXAVC on 8/8/20.
 //  Copyright © 2020 Linen & Sole. All rights reserved.
 //
 
 import Metal
 import Foundation
 import CoreGraphics
+
+#if os(macOS)
+import AppKit
+import Cocoa
+#endif
 
 open class MarbleEngine {
     let catalog: MarbleCatalog = .init()
@@ -83,7 +88,16 @@ extension MarbleEngine {
         guard let newTexture = catalog.transform(context: context, transform: transform)(texture) else {
             return nil
         }
-        return CGImage.fromTexture(newTexture)?.png
+        
+        #if os(iOS)
+            return CGImage.fromTexture(newTexture)?.png
+        #elseif os(OSX)
+        if let cgimage = CGImage.fromTexture(newTexture) {
+            return NSImage.init(cgImage: cgimage, size: newTexture.size).png
+        } else {
+            return nil
+        }
+        #endif
     }
     
     public func rotate(imageData: Data, degrees: CGFloat = 180) -> MarbleImage? {

@@ -2,8 +2,8 @@
 //  MetallicKernel.metal
 //  Wonder
 //
-//  Created by 0xKala on 4/19/20.
-//  Copyright © 2020 0xKala. All rights reserved.
+//  Created by PEXAVC on 4/19/20.
+//  Copyright © 2020 PEXAVC. All rights reserved.
 //
 
 #include <metal_stdlib>

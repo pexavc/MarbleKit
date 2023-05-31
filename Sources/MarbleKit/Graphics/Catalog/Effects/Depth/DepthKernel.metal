@@ -2,8 +2,8 @@
 //  DepthKernel.metal
 //  Wonder
 //
-//  Created by 0xKala on 1/2/20.
-//  Copyright © 2020 0xKala. All rights reserved.
+//  Created by PEXAVC on 1/2/20.
+//  Copyright © 2020 PEXAVC. All rights reserved.
 //
 #define POINT_SCALE 5.0
 #define SIGHT_RANGE 150.0

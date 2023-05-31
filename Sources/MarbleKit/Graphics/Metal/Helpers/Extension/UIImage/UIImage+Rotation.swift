@@ -2,8 +2,8 @@
 //  UIImage+Rotation.swift
 //  Wonder
 //
-//  Created by 0xKala on 3/18/20.
-//  Copyright © 2020 0xKala. All rights reserved.
+//  Created by PEXAVC on 3/18/20.
+//  Copyright © 2020 PEXAVC. All rights reserved.
 //
 
 import Foundation

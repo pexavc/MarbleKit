@@ -2,8 +2,8 @@
 //  UIImage+Watermark.swift
 //  Wonder
 //
-//  Created by 0xKala on 3/19/20.
-//  Copyright © 2020 0xKala. All rights reserved.
+//  Created by PEXAVC on 3/19/20.
+//  Copyright © 2020 PEXAVC. All rights reserved.
 //
 
 import Foundation
