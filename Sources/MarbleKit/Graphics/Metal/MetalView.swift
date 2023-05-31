@@ -307,6 +307,7 @@ open class MetalView: MarbleBaseView {
     open override func scrollWheel(with event: NSEvent) {
         gestures.updateScroll(.init(deltaX: event.deltaX, deltaY: event.deltaY, deltaZ: event.deltaZ, state: event.phase == .began ? .began : (event.phase == .changed ? .changed : .ended)))
         
+        //TODO: MAJOR, NO, but why was this needed (prior was mOS 11.0)?
         gestures.delegate?.gesturesUpdated(.init(pan: .init(), scale: .init(pinch: .init(), scale: .infinity), rotate: .init(), scroll: .init(deltaX: .infinity, deltaY: .infinity, deltaZ: .infinity, state: .began)))
     }
     
