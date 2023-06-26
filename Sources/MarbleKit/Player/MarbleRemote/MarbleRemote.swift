@@ -30,6 +30,8 @@ public class MarbleRemote: NSObject, ObservableObject {
     
     //Video
     private let config: MarbleRemoteConfig
+    
+    ///This is not in audioVideoOutput, since the compiled texture is available here
     private let videoClip: VideoClip = .init()
     private var subscriptions: Set<AnyCancellable> = []
     fileprivate var currentTexture: MTLTexture? = nil
@@ -293,6 +295,10 @@ public extension MarbleRemote {
         MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
         displayLink.invalidate()
         audioVideoOutput?.shutdown()
+        
+        self.videoClip.reset()
+        self.audioVideoOutput?.resetAudioClip()
+        Clip.shared.reset()
     }
     
     var currentPlaybackTime: TimeInterval? {

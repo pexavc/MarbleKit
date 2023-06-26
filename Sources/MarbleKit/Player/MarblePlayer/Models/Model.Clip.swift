@@ -239,6 +239,7 @@ extension Clip {
     func finish() {
         writer?.finishWriting {
             print("[Clip] finish writing")
+            self.reset()
         }
     }
 }

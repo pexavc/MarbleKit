@@ -118,6 +118,11 @@ public class AudioClip: NSObject, NSCopying {
     public func getData() -> [Data] {
         return self.data
     }
+    
+    public func reset() {
+        self.operationQueue.cancelAllOperations()
+        self.data.removeAll()
+    }
 }
 
 extension AudioClip.Data {

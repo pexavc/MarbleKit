@@ -399,4 +399,8 @@ public extension MarblePlayer {
     func getAudioClip() -> AudioClip? {
         return playerItem.getAudioClip()
     }
+    
+    func resetAudioClip() {
+        playerItem.resetAudioClip()
+    }
 }

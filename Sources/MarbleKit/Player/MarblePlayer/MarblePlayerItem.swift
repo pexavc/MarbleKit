@@ -805,4 +805,8 @@ extension MarblePlayerItem: MarblePlayerRenderSourceDelegate {
     func getAudioClip() -> AudioClip? {
         return self.audioClip.copy() as? AudioClip
     }
+    
+    func resetAudioClip() {
+        self.audioClip.reset()
+    }
 }
