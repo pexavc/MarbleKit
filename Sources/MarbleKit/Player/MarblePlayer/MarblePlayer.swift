@@ -106,6 +106,10 @@ private extension MarblePlayer {
         }?.audioDescriptor ?? .defaultValue
         options.setAudioSession(audioDescriptor: audioDescriptor)
     }
+    
+    func getFPSFromTrack() -> Float {
+        tracks(mediaType: .video).first { $0.isEnabled }.map(\.nominalFrameRate) ?? 24
+    }
 }
 
 extension MarblePlayer: MarblePlayerSourceDelegate {
@@ -117,8 +121,8 @@ extension MarblePlayer: MarblePlayerSourceDelegate {
         }?.audioDescriptor ?? .defaultValue
         options.setAudioSession(audioDescriptor: audioDescriptor)
         audioOutput.prepare(audioFormat: options.audioFormat)
-        let fps = tracks(mediaType: .video).first { $0.isEnabled }.map(\.nominalFrameRate) ?? 24
-        
+        let fps = getFPSFromTrack()
+        print("[MarblePlayer] -> [MetalViewUI] Source did open w/ \(fps)fps")
         self.fps = fps
         self.lastAudioSample.load(options.audioFrameMaxCount(fps: fps, channels: Int(audioDescriptor.channels)))
         
@@ -168,6 +172,10 @@ extension MarblePlayer: MarblePlayerSourceDelegate {
         } else {
             var progress = 100
             if loadingState.isPlayable {
+                let fps = getFPSFromTrack()
+                print("[MarblePlayer] -> [MetalViewUI] Source did change w/ \(fps)fps")
+                self.fps = fps
+                
                 loadState = .playable
             } else {
                 if loadingState.progress.isInfinite {
@@ -187,7 +195,11 @@ extension MarblePlayer: MarblePlayerSourceDelegate {
     }
 
     func sourceDidChange(oldBitRate: Int64, newBitrate: Int64) {
-        MarblePlayerLog("oldBitRate \(oldBitRate) change to newBitrate \(newBitrate)")
+        MarblePlayerLog("[MarblePlayer] oldBitRate \(oldBitRate) change to newBitrate \(newBitrate)")
+        
+        let fps = getFPSFromTrack()
+        print("[MarblePlayer] -> [MetalViewUI] Source did change(bitRate) w/ \(fps)fps")
+        self.fps = fps
     }
     
     func sourceDidOutputAudio(buffer: AVAudioPCMBuffer?) {
