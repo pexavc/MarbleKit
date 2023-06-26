@@ -51,6 +51,19 @@ public struct MarbleRemoteConfig: Equatable, Codable, Identifiable, Hashable {
             }
         }
         
+        var cgSize: CGSize {
+            switch self {
+            case .p1080:
+                return .init(width: 1920, height: 1080)
+            case .p720:
+                return .init(width: 1280, height: 720)
+            case .p540:
+                return .init(width: 960, height: 540)
+            case .p360:
+                return .init(width: 640, height: 360)
+            }
+        }
+        
         public static func ==(lhs: Resolution, rhs: Resolution) -> Bool {
             lhs.rawValue == rhs.rawValue
         }

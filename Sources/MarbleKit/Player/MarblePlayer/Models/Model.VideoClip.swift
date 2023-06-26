@@ -42,7 +42,7 @@ public class VideoClip: NSObject, NSCopying {
     }
     
     public func copy(with zone: NSZone? = nil) -> Any {
-        return VideoClip(self.data, fps: self.fps)
+        return VideoClip(self.data, fps: self.fps)//self.fps)
     }
     
     func update(_ cmTime: CMTime,

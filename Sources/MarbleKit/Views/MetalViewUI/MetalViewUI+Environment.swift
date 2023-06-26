@@ -33,6 +33,14 @@ private struct PreferredFramesPerSecondKey: EnvironmentKey {
     static var defaultValue: Int = 60
 }
 
+private struct ContentSizeKey: EnvironmentKey {
+    static var defaultValue: CGSize = CGSize(width: 640, height: 480)
+}
+
+private struct ScalingModeKey: EnvironmentKey {
+    static var defaultValue: ScalingMode = .scaleAspectFit
+}
+
 private struct IsPausedKey: EnvironmentKey {
     static var defaultValue: Bool = false
 }
@@ -47,6 +55,10 @@ private struct PresentWithTransactionKey: EnvironmentKey {
 
 private struct SetNeedsDisplayTriggerKey: EnvironmentKey {
     static var defaultValue: MetalViewUI.SetNeedsDisplayTrigger? = nil
+}
+
+private struct MarbleRemoteKey: EnvironmentKey {
+    static var defaultValue: MarbleRemote? = nil
 }
 
 extension EnvironmentValues {
@@ -76,6 +88,16 @@ extension EnvironmentValues {
         set { self[ClearColorKey.self] = newValue }
     }
     
+    var contentSize: CGSize {
+        get { self[ContentSizeKey.self] }
+        set { self[ContentSizeKey.self] = newValue }
+    }
+    
+    var scalingMode: ScalingMode {
+        get { self[ScalingModeKey.self] }
+        set { self[ScalingModeKey.self] = newValue }
+    }
+    
     var preferredFramesPerSecond: Int {
         get { self[PreferredFramesPerSecondKey.self] }
         set { self[PreferredFramesPerSecondKey.self] = newValue }
@@ -99,6 +121,11 @@ extension EnvironmentValues {
     var setNeedsDisplayTrigger: MetalViewUI.SetNeedsDisplayTrigger? {
         get { self[SetNeedsDisplayTriggerKey.self] }
         set { self[SetNeedsDisplayTriggerKey.self] = newValue }
+    }
+    
+    var marbleRemote: MarbleRemote? {
+        get { self[MarbleRemoteKey.self] }
+        set { self[MarbleRemoteKey.self] = newValue }
     }
     
 }
@@ -143,6 +170,18 @@ public extension View {
     
     func setNeedsDisplayTrigger(_ value: MetalViewUI.SetNeedsDisplayTrigger?) -> some View {
         self.environment(\.setNeedsDisplayTrigger, value)
+    }
+    
+    func scalingMode(_ value: ScalingMode) -> some View {
+        self.environment(\.scalingMode, value)
+    }
+    
+    func contentSize(_ value: CGSize) -> some View {
+        self.environment(\.contentSize, value)
+    }
+    
+    func remote(_ value: MarbleRemote) -> some View {
+        self.environment(\.marbleRemote, value)
     }
     
     @ViewBuilder

@@ -35,7 +35,7 @@ public class MarbleRemote: NSObject, ObservableObject {
     fileprivate var currentTexture: MTLTexture? = nil
     
     //FX
-    public weak var metalContext: MetalContext?
+    public var metalContext: MetalContext = .init()
     private let marble: MarbleEngine = .init()
     private var renderer: MetalRender = .init()
     
@@ -61,8 +61,8 @@ public class MarbleRemote: NSObject, ObservableObject {
         MarblePlayerOptions.logLevel = .info//.debug
         MarblePlayerOptions.isAutoPlay = false
         MarblePlayerOptions.isSeekedAutoPlay = false
-        MarblePlayerOptions.preferredForwardBufferDuration = 12
-        MarblePlayerOptions.maxBufferDuration = 48
+        MarblePlayerOptions.preferredForwardBufferDuration = 4//12
+        MarblePlayerOptions.maxBufferDuration = 16//48
         MarblePlayerOptions.dropVideoFrame = true
         
         $shouldLowerResolution
@@ -111,6 +111,7 @@ extension MarbleRemote {
         options.audioDelay = delay
         options.isAutoPlay = false
         options.syncDecodeAudio = false
+        options.syncDecodeVideo = false
         
         let player: MarblePlayer = .init(url: url, options: options)
         
@@ -173,15 +174,14 @@ extension MarbleRemote: MetalViewUIDelegate {
                 return
             }
             
+            let commandQueue = metalContext.commandQueue
             
-            
-            guard let commandQueue = metalContext?.commandQueue,
-                  let commandBuffer = commandQueue.makeCommandBuffer(),
+            guard let commandBuffer = commandQueue.makeCommandBuffer(),
                   let drawable = view.currentDrawable else {
                 return
             }
             
-            metalContext?.kernels.downsample.encode(
+            metalContext.kernels.downsample.encode(
                 commandBuffer: commandBuffer,
                 inputTexture: inputTexture,
                 outputTexture: drawable.texture)
@@ -231,10 +231,9 @@ extension MarbleRemote: MetalViewUIDelegate {
         
         descriptor.usage = [.shaderRead, .shaderWrite, .renderTarget]
         
+        let context = self.metalContext
         
-        
-        guard let context = self.metalContext,
-              let texture = context.device.makeTexture(descriptor: descriptor) else {
+        guard let texture = context.device.makeTexture(descriptor: descriptor) else {
             return nil
         }
         
@@ -244,17 +243,19 @@ extension MarbleRemote: MetalViewUIDelegate {
     }
     
     func renderFX(_ texture: MTLTexture) -> MTLTexture {
-        guard MarbleRemote.enableFX else {
+        guard MarbleRemote.enableFX,
+              MarbleRemote.fx.isEmpty == false else {
             return texture
         }
         
-        //Audio Analyzer
+        //Audio Analyzed
         let audioSample = audioVideoOutput?.getLastAudioSample() ?? .init()
 
-        guard audioSample.isReady,
-              let context = self.metalContext else {
+        guard audioSample.isReady else {
             return texture
         }
+        
+        let context = self.metalContext
         
         let layers: [MarbleLayer] = MarbleRemote.fx.map {
             .init($0.getLayer(audioSample.amplitude, threshold: 1.0))
@@ -292,7 +293,6 @@ public extension MarbleRemote {
         MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
         displayLink.invalidate()
         audioVideoOutput?.shutdown()
-        self.metalContext = nil
     }
     
     var currentPlaybackTime: TimeInterval? {

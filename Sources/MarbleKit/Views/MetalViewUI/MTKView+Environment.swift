@@ -29,3 +29,25 @@ extension MTKView {
     }
     
 }
+
+extension MetalView {
+    
+    @discardableResult
+    func apply(_ environment: EnvironmentValues) -> Self {
+
+        self.mtkView.colorPixelFormat = environment.colorPixelFormat
+        self.mtkView.framebufferOnly = environment.framebufferOnly
+        if let drawableSize = environment.drawableSize {
+            self.mtkView.drawableSize = drawableSize
+        }
+        self.mtkView.autoResizeDrawable = environment.autoResizeDrawable
+        self.mtkView.clearColor = environment.clearColor
+        self.mtkView.preferredFramesPerSecond = environment.preferredFramesPerSecond
+        self.mtkView.enableSetNeedsDisplay = environment.enableSetNeedsDisplay
+        self.mtkView.isPaused = environment.isPaused
+        self.mtkView.presentsWithTransaction = environment.presentWithTransaction
+        return self
+        
+    }
+    
+}

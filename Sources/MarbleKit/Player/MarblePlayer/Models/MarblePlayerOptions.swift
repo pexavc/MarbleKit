@@ -147,7 +147,7 @@ open class MarblePlayerOptions {
                 return true
             }
             if isFirst || isSeek {
-                // 让纯音频能更快的打开
+                // pure audio syncs faster
                 if capacity.mediaType == .audio || isSecondOpen {
                     if isFirst {
                         return true
@@ -378,6 +378,8 @@ public extension MarblePlayerOptions {
     static var isVideoClippingEnabled = true
     
     static var logLevel = LogLevel.warning
+    
+    static var preferredFramesPerSecond: Int = 30
     
     static var sampleRate: Double = 44100
     

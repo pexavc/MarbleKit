@@ -41,7 +41,12 @@ public enum EffectType {
     }
 }
 
-public enum MarbleEffect {
+public enum MarbleEffect: String, Equatable, Codable, CaseIterable, Identifiable, Hashable {
+    
+    public var id: String {
+        self.rawValue
+    }
+    
     //Sample, Threshold
     case none
     case analog
@@ -83,5 +88,23 @@ public enum MarbleEffect {
         case .none:
             return .none
         }
+    }
+    
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+    
+    public static var effects2D: [MarbleEffect] {
+        [
+            .analog,
+            .pixellate,
+            .disco,
+            .drive,
+            .ink,
+            .vibes,
+            .bokeh,
+            .godRay,
+            .polka
+        ]
     }
 }
