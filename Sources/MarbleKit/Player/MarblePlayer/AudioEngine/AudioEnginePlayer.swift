@@ -172,11 +172,11 @@ final class AudioEnginePlayer: AudioPlayer, MarblePlayerFrameOutput {
     }
 
     private func addRenderNotify(audioUnit: AudioUnit) {
-        AudioUnitAddRenderNotify(audioUnit, { refCon, ioActionFlags, inTimeStamp, _, _, ioData in
+        AudioUnitAddRenderNotify(audioUnit, { refCon, ioActionFlags, inTimeStamp, _, _, _ in
             let `self` = Unmanaged<AudioEnginePlayer>.fromOpaque(refCon).takeUnretainedValue()
             autoreleasepool {
                 if ioActionFlags.pointee.contains(.unitRenderAction_PostRender) {
-                    self.audioPlayerDidRenderSample(sampleTimestamp: inTimeStamp.pointee, ioData: ioData?.pointee)
+                    self.audioPlayerDidRenderSample(sampleTimestamp: inTimeStamp.pointee)
                     
                 }
             }
@@ -225,7 +225,7 @@ final class AudioEnginePlayer: AudioPlayer, MarblePlayerFrameOutput {
         }
     }
 
-    private func audioPlayerDidRenderSample(sampleTimestamp _: AudioTimeStamp, ioData: AudioBufferList?) {
+    private func audioPlayerDidRenderSample(sampleTimestamp _: AudioTimeStamp) {
         if let currentRender {
             let currentPreparePosition = currentRender.position + currentRender.duration * Int64(currentRenderReadOffset) / Int64(currentRender.numberOfSamples)
             if currentPreparePosition > 0 {

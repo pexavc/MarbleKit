@@ -15,6 +15,7 @@ final class MarblePlayerItem {
     private let url: URL
     private let options: MarblePlayerOptions
     private let operationQueue = OperationQueue()
+    private var setAudioOperationQueue: OperationQueue = .init()
     private let condition = NSCondition()
     private var formatCtx: UnsafeMutablePointer<AVFormatContext>?
     private var outputFormatCtx: UnsafeMutablePointer<AVFormatContext>?
@@ -130,9 +131,15 @@ final class MarblePlayerItem {
         self.url = url
         self.options = options
         timer.fireDate = Date.distantFuture
-        operationQueue.name = "MarbleKit.Player_" + String(describing: self).components(separatedBy: ".").last!
+        operationQueue.name = "marblekit.playeritem.read.queue_" + String(describing: self).components(separatedBy: ".").last!
         operationQueue.maxConcurrentOperationCount = 1
         operationQueue.qualityOfService = .userInteractive
+        
+        //TODO: check/remove
+        setAudioOperationQueue.name = "marblekit.playeritem.setAudio.queue"
+        setAudioOperationQueue.maxConcurrentOperationCount = 1
+        setAudioOperationQueue.qualityOfService = .userInteractive
+        
         _ = onceInitial
     }
 
@@ -592,7 +599,7 @@ extension MarblePlayerItem: MarbleMediaPlayback {
         let closeOperation = BlockOperation {
             Thread.current.name = (self.operationQueue.name ?? "") + "_close"
             self.allPlayerItemTracks.forEach { $0.shutdown() }
-            MarblePlayerLog("清空formatCtx")
+            MarblePlayerLog("formatCtx")
             self.formatCtx?.pointee.interrupt_callback.opaque = nil
             self.formatCtx?.pointee.interrupt_callback.callback = nil
             avformat_close_input(&self.formatCtx)
@@ -722,24 +729,31 @@ extension MarblePlayerItem: MarblePlayerRenderSourceDelegate {
     }
 
     func setAudio(time: CMTime) {
-        if state == .seeking {
+        guard state != .seeking else {
             return
         }
+        
         if !isAudioStalled {
             currentPlaybackTime = time.seconds
         }
     }
     
     func setAudio(time: CMTime, frame: AudioFrame) {
-        guard let pcm = options.audioFormat.toPCMBuffer(frame: frame) else {
+        guard state != .seeking else {
             return
         }
         
-        if options.isVideoClippingEnabled {
-            delegate?.sourceDidOutputAudio(buffer: pcm)
+        guard !isAudioStalled else {
+            return
         }
         
-        self.audioClip.update(time, buffer: pcm, format: options.audioFormat)
+        guard let pcm = self.options.audioFormat.toPCMBuffer(frame: frame) else {
+            return
+        }
+        
+        self.delegate?.sourceDidOutputAudio(buffer: pcm)
+        
+        self.audioClip.update(time, buffer: pcm, format: self.options.audioFormat)
     }
 
     func getVideoOutputRender(force: Bool) -> VideoVTBFrame? {
@@ -774,30 +788,6 @@ extension MarblePlayerItem: MarblePlayerRenderSourceDelegate {
                 return nil
             case .show:
                 break
-            }
-        }
-        
-        //Updates lastAudioSample in player for realtime audio analyicts
-        //But, can use clip if enabled
-        //TODO: detect clipping options in config
-        
-        if options.isVideoClippingEnabled == false {
-            if let audioPredicate: (AudioFrame) -> Bool = force ? nil : { [weak self] frame -> Bool in
-                guard let self else { return true }
-                desire = self.currentPlaybackTime + self.options.audioDelay
-#if !os(macOS)
-                desire -= AVAudioSession.sharedInstance().outputLatency
-#endif
-                if self.isAudioStalled {
-                    desire += max(CACurrentMediaTime() - self.videoMediaTime, 0)
-                }
-                return frame.seconds <= desire
-            } {
-                
-                if let audioFrame = audioTrack?.searchRender(where: audioPredicate) {
-                    let pcm = options.audioFormat.toPCMBuffer(frame: audioFrame)
-                    delegate?.sourceDidOutputAudio(buffer: pcm)
-                }
             }
         }
         

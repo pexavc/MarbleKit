@@ -45,7 +45,13 @@ public class AudioClip: NSObject, NSCopying {
     }
     
     func update(_ cmTime: CMTime, buffer: AVAudioPCMBuffer, format: AVAudioFormat) {
-        guard canWrite else { return }
+        guard MarblePlayerOptions.isVideoClippingEnabled,
+              canWrite else {
+            if self.data.isEmpty == false {
+                self.data.removeAll()
+            }
+            return
+        }
         operationQueue.addOperation {
             
             self.data.append(.init(cmTime: cmTime,

@@ -6,7 +6,7 @@ import Combine
 
 
 public protocol MetalViewUIDelegate: MTKViewDelegate {
-    var metalContext: MetalContext { get set }
+    var metalContext: MetalContext? { get set }
 }
 
 #if os(OSX)
@@ -23,12 +23,12 @@ public struct MetalViewUI: NSViewRepresentable {
 
     public typealias UIViewType = MTKView
     
-    public var metalContext: MetalContext
+    public var metalContext: MetalContext = .init()
     private weak var remote: MetalViewUIDelegate?
     
     public init(remote: MetalViewUIDelegate?) {
         self.remote = remote
-        self.metalContext = .init(context: remote?.metalContext)
+        remote?.metalContext = self.metalContext
     }
     
     public func makeCoordinator() -> Coordinator {

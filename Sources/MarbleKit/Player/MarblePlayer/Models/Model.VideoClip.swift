@@ -49,7 +49,14 @@ public class VideoClip: NSObject, NSCopying {
                 fps: Float? = 60,
                 buffer: CVPixelBuffer?,
                 texture: MTLTexture?) {
-        guard canWrite else { return }
+        
+        guard MarblePlayerOptions.isVideoClippingEnabled,
+              canWrite else {
+            if self.data.isEmpty == false {
+                self.data.removeAll()
+            }
+            return
+        }
         operationQueue.addOperation {
             guard let buffer, let texture else { return }
             self.fps = fps ?? self.fps

@@ -12,11 +12,12 @@ import AVFoundation
 import Accelerate
 import AudioToolbox
 import MetalKit
+import MediaPlayer
 
 public class MarbleRemote: NSObject, ObservableObject {
     public static var current: MarbleRemote = .init()
     
-    public static var enableFX: Bool = true
+    public static var enableFX: Bool = false
     public static var fx: [MarbleEffect] = [.godRay]
     
     @Published var fps: Float = 60
@@ -34,7 +35,7 @@ public class MarbleRemote: NSObject, ObservableObject {
     fileprivate var currentTexture: MTLTexture? = nil
     
     //FX
-    public var metalContext: MetalContext = .init()
+    public weak var metalContext: MetalContext?
     private let marble: MarbleEngine = .init()
     private var renderer: MetalRender = .init()
     
@@ -60,8 +61,8 @@ public class MarbleRemote: NSObject, ObservableObject {
         MarblePlayerOptions.logLevel = .info//.debug
         MarblePlayerOptions.isAutoPlay = false
         MarblePlayerOptions.isSeekedAutoPlay = false
-        MarblePlayerOptions.preferredForwardBufferDuration = 4//12
-        MarblePlayerOptions.maxBufferDuration = 24//48
+        MarblePlayerOptions.preferredForwardBufferDuration = 12
+        MarblePlayerOptions.maxBufferDuration = 48
         MarblePlayerOptions.dropVideoFrame = true
         
         $shouldLowerResolution
@@ -111,9 +112,7 @@ extension MarbleRemote {
         options.isAutoPlay = false
         options.syncDecodeAudio = false
         
-        let res0 = MarblePlayerResourceDefinition(url: url, definition: "Main", options: options)
-        
-        let player: MarblePlayer = .init(url: url, options: res0.options)
+        let player: MarblePlayer = .init(url: url, options: options)
         
         self.audioVideoOutput = player
         self.audioVideoOutput?.delegate = self
@@ -125,6 +124,14 @@ extension MarbleRemote {
 extension MarbleRemote: MarblePlayerDelegate {
     public func readyToPlay(player: some MarblePlayerProtocol) {
         self.fps = self.audioVideoOutput?.fps ?? 60
+        
+        //TODO: isLiveStream should be a getter from remoteConfig
+        let metadata = MarbleNowPlayableMetadata(mediaType: .video,
+                                                 isLiveStream: true,
+                                                 title: config.description,
+                                                 artist: config.name)
+        
+        MPNowPlayingInfoCenter.default().nowPlayingInfo = metadata.nowPlayingInfo
     }
     
     public func changeLoadState(player: some MarblePlayerProtocol) {
@@ -136,7 +143,14 @@ extension MarbleRemote: MarblePlayerDelegate {
     }
     
     public func playBack(player: some MarblePlayerProtocol, loopCount: Int) {
-        
+        switch player.playbackState {
+        case .playing:
+            MPNowPlayingInfoCenter.default().playbackState = .playing
+        case .paused:
+            MPNowPlayingInfoCenter.default().playbackState = .paused
+        default:
+            MPNowPlayingInfoCenter.default().playbackState = .stopped
+        }
     }
     
     public func finish(player: some MarblePlayerProtocol, error: Error?) {
@@ -159,14 +173,15 @@ extension MarbleRemote: MetalViewUIDelegate {
                 return
             }
             
-            let commandQueue = metalContext.commandQueue
             
-            guard let commandBuffer = commandQueue.makeCommandBuffer(),
+            
+            guard let commandQueue = metalContext?.commandQueue,
+                  let commandBuffer = commandQueue.makeCommandBuffer(),
                   let drawable = view.currentDrawable else {
                 return
             }
             
-            metalContext.kernels.downsample.encode(
+            metalContext?.kernels.downsample.encode(
                 commandBuffer: commandBuffer,
                 inputTexture: inputTexture,
                 outputTexture: drawable.texture)
@@ -216,9 +231,10 @@ extension MarbleRemote: MetalViewUIDelegate {
         
         descriptor.usage = [.shaderRead, .shaderWrite, .renderTarget]
         
-        let context = self.metalContext
         
-        guard let texture = context.device.makeTexture(descriptor: descriptor) else {
+        
+        guard let context = self.metalContext,
+              let texture = context.device.makeTexture(descriptor: descriptor) else {
             return nil
         }
         
@@ -235,11 +251,10 @@ extension MarbleRemote: MetalViewUIDelegate {
         //Audio Analyzer
         let audioSample = audioVideoOutput?.getLastAudioSample() ?? .init()
 
-        guard audioSample.isReady else {
+        guard audioSample.isReady,
+              let context = self.metalContext else {
             return texture
         }
-        
-        let context = self.metalContext
         
         let layers: [MarbleLayer] = MarbleRemote.fx.map {
             .init($0.getLayer(audioSample.amplitude, threshold: 1.0))
@@ -274,8 +289,10 @@ public extension MarbleRemote {
     }
     
     func shutdown() {
+        MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
         displayLink.invalidate()
         audioVideoOutput?.shutdown()
+        self.metalContext = nil
     }
     
     var currentPlaybackTime: TimeInterval? {
