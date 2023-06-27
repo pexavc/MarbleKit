@@ -46,7 +46,7 @@ public class VideoClip: NSObject, NSCopying {
     }
     
     func update(_ cmTime: CMTime,
-                fps: Float? = 60,
+                fps: Float? = MarblePlayerOptions.preferredFramesPerSecond.floatValue,
                 buffer: CVPixelBuffer?,
                 texture: MTLTexture?) {
         

@@ -115,10 +115,10 @@ final class AudioEnginePlayer: AudioPlayer, MarblePlayerFrameOutput {
 
     var volume: Float {
         get {
-            engine.mainMixerNode.volume
+            engine.mainMixerNode.outputVolume
         }
         set {
-            engine.mainMixerNode.volume = newValue
+            engine.mainMixerNode.outputVolume = newValue
         }
     }
 
@@ -127,7 +127,7 @@ final class AudioEnginePlayer: AudioPlayer, MarblePlayerFrameOutput {
             engine.mainMixerNode.outputVolume == 0.0
         }
         set {
-            engine.mainMixerNode.outputVolume = newValue ? 0.0 : 1.0
+            engine.mainMixerNode.outputVolume = newValue ? 0.0 : volume
         }
     }
 
@@ -150,6 +150,8 @@ final class AudioEnginePlayer: AudioPlayer, MarblePlayerFrameOutput {
         engine.attach(sourceNode)
         engine.attach(dynamicsProcessor)
         engine.attach(timePitch)
+        //Default volume
+        engine.mainMixerNode.outputVolume = 0.5
         engine.connect(nodes: [sourceNode, dynamicsProcessor, timePitch, engine.mainMixerNode], format: audioFormat)
         if let audioUnit = engine.outputNode.audioUnit {
             addRenderNotify(audioUnit: audioUnit)

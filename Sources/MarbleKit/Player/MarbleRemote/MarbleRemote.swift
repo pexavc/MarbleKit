@@ -20,7 +20,7 @@ public class MarbleRemote: NSObject, ObservableObject {
     public static var enableFX: Bool = false
     public static var fx: [MarbleEffect] = [.godRay]
     
-    @Published var fps: Float = 60
+    @Published var fps: Float = MarblePlayerOptions.preferredFramesPerSecond.floatValue
     @Published var selectedResolution: MarbleRemoteConfig.Resolution
     @Published private var shouldLowerResolution = false
     
@@ -63,8 +63,8 @@ public class MarbleRemote: NSObject, ObservableObject {
         MarblePlayerOptions.logLevel = .info//.debug
         MarblePlayerOptions.isAutoPlay = false
         MarblePlayerOptions.isSeekedAutoPlay = false
-        MarblePlayerOptions.preferredForwardBufferDuration = 4//12
-        MarblePlayerOptions.maxBufferDuration = 16//48
+        MarblePlayerOptions.preferredForwardBufferDuration = 12
+        MarblePlayerOptions.maxBufferDuration = 48
         MarblePlayerOptions.dropVideoFrame = true
         
         $shouldLowerResolution
@@ -312,6 +312,24 @@ public extension MarbleRemote {
         }
 
         Clip.shared.render(video: videoClip, audio: audioClip)
+    }
+    
+    var isMuted: Bool {
+        get {
+            self.audioVideoOutput?.isMuted ?? false
+        }
+        set {
+            self.audioVideoOutput?.isMuted = newValue
+        }
+    }
+    
+    var volume: Float {
+        get {
+            self.audioVideoOutput?.playbackVolume ?? 0.5
+        }
+        set {
+            self.audioVideoOutput?.playbackVolume = newValue
+        }
     }
 }
 

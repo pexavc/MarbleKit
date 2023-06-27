@@ -28,7 +28,7 @@ public class MarblePlayer: NSObject {
     
     private var lastAudioSample: AudioSample = .shared
     
-    public var fps: Float = 60
+    public var fps: Float = MarblePlayerOptions.preferredFramesPerSecond.floatValue
     
     public weak var delegate: MarblePlayerDelegate?
     
@@ -108,7 +108,11 @@ private extension MarblePlayer {
     }
     
     func getFPSFromTrack() -> Float {
-        tracks(mediaType: .video).first { $0.isEnabled }.map(\.nominalFrameRate) ?? 24
+        if MarblePlayerOptions.forcePreferredFPS {
+            return Float(MarblePlayerOptions.preferredFramesPerSecond)
+        }
+        
+        return tracks(mediaType: .video).first { $0.isEnabled }.map(\.nominalFrameRate) ?? 24
     }
 }
 
