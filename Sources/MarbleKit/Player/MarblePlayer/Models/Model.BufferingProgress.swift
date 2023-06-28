@@ -48,7 +48,7 @@ public final class BufferingProgress: NSObject, ObservableObject {
         
         self.operationQueue.addOperation {
             DispatchQueue.main.async {
-                self.stats = .init(progress: self.progress, loadState: self.loadState)
+                self.stats = .init(progress: self.progress, loadState: self.loadState, isDropping: self.isDropping)
             }
         }
     }
@@ -58,16 +58,17 @@ public final class BufferingProgress: NSObject, ObservableObject {
         
         self.operationQueue.addOperation {
             DispatchQueue.main.async {
-                self.stats = .init(progress: self.progress, loadState: self.loadState)
+                self.stats = .init(progress: self.progress, loadState: self.loadState, isDropping: self.isDropping)
             }
         }
     }
     
     func update(clockType: ClockProcessType) {
+        self.isDropping = clockType == .drop
         guard self.stats.isDropping != self.isDropping else { return }
         self.operationQueue.addOperation {
             DispatchQueue.main.async {
-                self.stats = .init(progress: self.progress, loadState: self.loadState, isDropping: clockType == .drop)
+                self.stats = .init(progress: self.progress, loadState: self.loadState, isDropping: self.isDropping)
             }
         }
     }

@@ -158,6 +158,10 @@ extension MarbleRemote: MarblePlayerDelegate {
     public func clockProcessChanged(_ type: ClockProcessType) {
         BufferingProgress.shared.update(clockType: type)
     }
+    
+    public func fpsChanged(_ fps: Float) {
+        self.fps = fps
+    }
 }
 
 //MARK: Marble MetalViewDelegate + Rendering

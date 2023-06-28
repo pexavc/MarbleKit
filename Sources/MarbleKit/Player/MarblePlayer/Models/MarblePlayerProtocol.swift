@@ -58,6 +58,7 @@ public protocol MarblePlayerDelegate: AnyObject {
     func readyToPlay(player: some MarblePlayerProtocol)
     func changeLoadState(player: some MarblePlayerProtocol, loadState: MarbleMediaLoadState)
     func clockProcessChanged(_ type: ClockProcessType)
+    func fpsChanged(_ fps: Float)
     // 0-100
     func changeBuffering(player: some MarblePlayerProtocol, progress: Int)
     func playBack(player: some MarblePlayerProtocol, loopCount: Int)

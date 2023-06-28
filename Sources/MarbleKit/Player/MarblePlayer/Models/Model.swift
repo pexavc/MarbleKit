@@ -47,6 +47,7 @@ protocol MarblePlayerSourceDelegate: AnyObject {
     func sourceDidOutputAudio(buffer: AVAudioPCMBuffer?)
     func sourceIsNotInSync(videoTime: CMTime, audioTimeDesired: TimeInterval)
     func sourceClock(_ type: ClockProcessType)
+    func packetReceivedFPS(_ fps: Float)
 }
 
 // MARK: protocol

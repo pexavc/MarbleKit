@@ -300,6 +300,7 @@ extension MarblePlayerItem {
                     if let outStream = avformat_new_stream(outputFormatCtx, nil) {
                         streamMapping[i] = index
                         index += 1
+                        
                         avcodec_parameters_copy(outStream.pointee.codecpar, inputStream.pointee.codecpar)
                         if codecType == AVMEDIA_TYPE_SUBTITLE, formatName == "mp4" || formatName == "mov" {
                             outStream.pointee.codecpar.pointee.codec_id = AV_CODEC_ID_MOV_TEXT
@@ -503,7 +504,7 @@ extension MarblePlayerItem {
                 }
             }
             if formatCtx?.pointee.pb?.pointee.eof_reached == 1 {
-                // todo need reconnect
+                //TODO: need reconnect
             }
             if corePacket.pointee.size <= 0 {
                 return
@@ -513,6 +514,27 @@ extension MarblePlayerItem {
             if let first, first.isEnabled {
                 packet.assetTrack = first
                 if first.mediaType == .video {
+                    //Handle new framerate if any
+                    //TODO: make re-usable see FFmpegAssetTrack l:53
+                    if let stream = formatCtx?.pointee.streams[Int(corePacket.pointee.stream_index)] {
+                        var timebase = Timebase(corePacket.pointee.time_base)
+                        if timebase.num <= 0 || timebase.den <= 0 {
+                            timebase = Timebase(num: 1, den: 1000)
+                        }
+                        
+                        let frameRate = stream.pointee.avg_frame_rate
+                        var nominalFrameRate: Float = 0
+                        if stream.pointee.duration > 0, stream.pointee.nb_frames > 0, stream.pointee.nb_frames != stream.pointee.duration {
+                            nominalFrameRate = Float(stream.pointee.nb_frames) * Float(timebase.den) / Float(stream.pointee.duration) * Float(timebase.num)
+                        } else if frameRate.den > 0, frameRate.num > 0 {
+                            nominalFrameRate = Float(frameRate.num) / Float(frameRate.den)
+                        }
+                        if videoTrack?.fps != nominalFrameRate {
+                            print("[MarblePlayerItem] newFPS: \(nominalFrameRate)")
+                            delegate?.packetReceivedFPS(nominalFrameRate)
+                        }
+                    }
+                    
                     if options.readVideoTime == 0 {
                         options.readVideoTime = CACurrentMediaTime()
                     }
@@ -611,6 +633,8 @@ extension MarblePlayerItem: MarbleMediaPlayback {
             self.formatCtx?.pointee.interrupt_callback.callback = nil
             avformat_close_input(&self.formatCtx)
             avformat_close_input(&self.outputFormatCtx)
+            //TODO: might be best to never deinit and init during application start and only init once?
+            avformat_network_deinit()
             self.duration = 0
             self.closeOperation = nil
             self.operationQueue.cancelAllOperations()
@@ -691,6 +715,10 @@ extension MarblePlayerItem: MarbleCodecCapacityDelegate {
 
     private func adaptableVideo(loadingState: LoadingState) {
         if options.videoDisable || videoAdaptation == nil || loadingState.isEndOfFile || loadingState.isSeek || state == .seeking {
+            
+            if loadingState.isEndOfFile {
+                print("[MarblePlayerItem] adaptableVideo: eof")
+            }
             return
         }
         guard let track = videoTrack else {
@@ -702,6 +730,9 @@ extension MarblePlayerItem: MarbleCodecCapacityDelegate {
         guard let (oldBitRate, newBitrate) = options.adaptable(state: videoAdaptation), oldBitRate != newBitrate,
               let newFFmpegAssetTrack = assetTracks.first(where: { $0.mediaType == .video && $0.bitRate == newBitrate })
         else {
+            if loadingState.isEndOfFile {
+                print("[MarblePlayerItem] adaptableVideo: newBitrate not found")
+            }
             return
         }
         assetTracks.first { $0.mediaType == .video && $0.bitRate == oldBitRate }?.isEnabled = false

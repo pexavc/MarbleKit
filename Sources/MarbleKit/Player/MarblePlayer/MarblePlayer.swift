@@ -112,6 +112,8 @@ private extension MarblePlayer {
             return Float(MarblePlayerOptions.preferredFramesPerSecond)
         }
         
+        print("[MarblePlayer] FPS values found: \(tracks(mediaType: .video).map { $0.nominalFrameRate })")
+        
         return tracks(mediaType: .video).first { $0.isEnabled }.map(\.nominalFrameRate) ?? 24
     }
 }
@@ -231,6 +233,10 @@ extension MarblePlayer: MarblePlayerSourceDelegate {
     
     func sourceClock(_ type: ClockProcessType) {
         self.delegate?.clockProcessChanged(type)
+    }
+    
+    func packetReceivedFPS(_ fps: Float) {
+        self.delegate?.fpsChanged(fps)
     }
 }
 
