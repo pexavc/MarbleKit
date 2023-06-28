@@ -529,7 +529,7 @@ extension MarblePlayerItem {
                         } else if frameRate.den > 0, frameRate.num > 0 {
                             nominalFrameRate = Float(frameRate.num) / Float(frameRate.den)
                         }
-                        if videoTrack?.fps != nominalFrameRate {
+                        if videoTrack?.fps != nominalFrameRate && nominalFrameRate > .zero {
                             print("[MarblePlayerItem] newFPS: \(nominalFrameRate)")
                             delegate?.packetReceivedFPS(nominalFrameRate)
                         }
