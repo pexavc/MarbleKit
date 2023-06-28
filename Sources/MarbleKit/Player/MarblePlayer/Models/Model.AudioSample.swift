@@ -175,6 +175,8 @@ public final class AudioSample: NSObject, ObservableObject {
 
         var magnitudes = [Float](repeating: 0.0, count: scaledBinCount)
         vDSP_zvmags(&scaledOutput, 1, &magnitudes, 1, vDSP_Length(scaledBinCount))
+        
+        //TODO: malloc cache, modified after freed. Could be deference issue?
         vDSP_destroy_fftsetup(fftSetup)
 
         if !isNormalized {
