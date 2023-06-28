@@ -101,10 +101,6 @@ public class AudioClip: NSObject, NSCopying {
             frames += data.frameCount
         }
         
-        if data.frameCount == 1024 {
-            print("[Clip] \(data.format.sampleRate)")
-        }
-        
         return .init(value: CMTimeValue(frames),
                      timescale: CMTimeScale(data.format.sampleRate))
     }

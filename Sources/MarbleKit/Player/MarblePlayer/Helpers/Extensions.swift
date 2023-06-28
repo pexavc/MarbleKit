@@ -173,7 +173,7 @@ public enum ClockProcessType {
     case seek
 }
 
-// 缓冲情况
+// Base Buffering Model
 public protocol CapacityProtocol {
     var fps: Float { get }
     var packetCount: Int { get }

@@ -96,7 +96,7 @@ private extension MarblePlayer {
             } else {
                 self.audioOutput.play(time: self.playerItem.currentPlaybackTime)
             }
-            self.delegate?.changeLoadState(player: self)
+            self.delegate?.changeLoadState(player: self, loadState: self.loadState)
         }
     }
 
@@ -138,6 +138,7 @@ extension MarblePlayer: MarblePlayerSourceDelegate {
     }
 
     func sourceDidFailed(error: NSError?) {
+        print("[MarblePlayer] -> [MetalViewUI] Source did fail")
         runInMainqueue { [weak self] in
             guard let self else { return }
             self.delegate?.finish(player: self, error: error)
@@ -145,13 +146,14 @@ extension MarblePlayer: MarblePlayerSourceDelegate {
     }
 
     func sourceDidFinished() {
+        print("[MarblePlayer] -> [MetalViewUI] Source did finish")
+        
         runInMainqueue { [weak self] in
             guard let self else { return }
             if self.options.isLoopPlay {
                 self.loopCount += 1
                 self.delegate?.playBack(player: self, loopCount: self.loopCount)
                 self.audioOutput.play(time: 0)
-                
             } else {
                 self.playbackState = .finished
             }
@@ -159,6 +161,8 @@ extension MarblePlayer: MarblePlayerSourceDelegate {
     }
 
     func sourceDidChange(loadingState: LoadingState) {
+        let lastLoadState = self.loadState
+        
         if loadingState.isEndOfFile {
             playableTime = duration
         } else {
@@ -189,12 +193,23 @@ extension MarblePlayer: MarblePlayerSourceDelegate {
                 } else {
                     progress = min(100, Int(loadingState.progress))
                 }
+                self.loadState = .loading
             }
             if playbackState == .playing {
                 runInMainqueue { [weak self] in
                     self?.bufferingProgress = progress
                 }
             }
+        }
+        
+        guard lastLoadState != self.loadState else { return }
+        
+        runInMainqueue { [weak self] in
+            guard let self else { return }
+            
+            print("[MarblePlayer] -> [MetalViewUI] Source did change loadingState: \(self.loadState)")
+                
+            self.delegate?.changeLoadState(player: self, loadState: self.loadState)
         }
     }
 
@@ -208,6 +223,14 @@ extension MarblePlayer: MarblePlayerSourceDelegate {
     
     func sourceDidOutputAudio(buffer: AVAudioPCMBuffer?) {
         self.lastAudioSample.update(buffer)
+    }
+    
+    func sourceIsNotInSync(videoTime: CMTime, audioTimeDesired: TimeInterval) {
+        print("[MarblePlayer] Out of sync, V: \(videoTime.seconds) A: \(audioTimeDesired)")
+    }
+    
+    func sourceClock(_ type: ClockProcessType) {
+        self.delegate?.clockProcessChanged(type)
     }
 }
 
@@ -418,5 +441,9 @@ public extension MarblePlayer {
     
     func resetAudioClip() {
         playerItem.resetAudioClip()
+    }
+    
+    func setVideo(time: CMTime) {
+        playerItem.setVideo(time: time)
     }
 }

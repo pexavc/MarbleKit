@@ -15,13 +15,16 @@ public final class AudioSample: NSObject, ObservableObject {
     
     public static var shared: AudioSample = .init()
     
+    public static var fftBins: Int = 16
+    public static var silenceLimit: Float = -55
+    
     public struct Stats {
         var amplitude: Float = 0
         var dB: Float = 0
         public var fft: [Float] = []
         
         public var disply_dB: Float {
-            60 - abs(dB)
+            abs(dB) == 0 ? 0 : max(60 - abs(dB), 0)
         }
     }
     
@@ -48,12 +51,12 @@ public final class AudioSample: NSObject, ObservableObject {
     
     var operationQueueFFT: OperationQueue = .init()
     
-    private let  queue: DispatchQueue = .init(label: "marblekit.audio.analysis", qos: .userInteractive)
+    private let queue: DispatchQueue = .init(label: "marblekit.audio.analysis", qos: .userInteractive)
     
     init(_ bufferSize: Int = .max) {
         self.bufferSize = 8
         super.init()
-        self.operationQueueFFT.underlyingQueue = queue
+        self.operationQueueFFT.qualityOfService = .userInteractive
         self.operationQueueFFT.maxConcurrentOperationCount = 1
     }
     
@@ -68,10 +71,10 @@ public final class AudioSample: NSObject, ObservableObject {
         
         operationQueueFFT.addOperation {
             let level = self.calculateDB(from: buffer)
-            self.amplitude = level.amplitude * 5
+            self.amplitude = level.amplitude * 3
             self.dB = level.dB
             
-            let fft = self.performFFT(buffer: buffer)
+            let fft = level.dB <= AudioSample.silenceLimit ? .init(repeating: 0, count: AudioSample.fftBins) : self.performFFT(buffer: buffer, fftBins: AudioSample.fftBins)
             
             DispatchQueue.main.async {
                 if self.amplitude.isFinite && self.dB.isFinite {
@@ -106,14 +109,14 @@ public final class AudioSample: NSObject, ObservableObject {
         let amplitude = rootMeanSquare * sqrt(2.0)
         
         let dB = 20.0 * log10(amplitude)
-
         return (amplitude, dB)
     }
     
     //Based on: https://github.com/AudioKit/AudioKit/blob/main/Sources/AudioKit/Taps/FFTTap.swift
     func performFFT(buffer: AVAudioPCMBuffer,
                     isNormalized: Bool = true,
-                    zeroPaddingFactor: UInt32 = 0) -> [Float] {
+                    zeroPaddingFactor: UInt32 = 0,
+                    fftBins: Int = 16) -> [Float] {
         let frameCount = buffer.frameLength + buffer.frameLength * zeroPaddingFactor
         
 //        let preferredBinCount: Double = 16
@@ -125,9 +128,10 @@ public final class AudioSample: NSObject, ObservableObject {
         let fftSetup = vDSP_create_fftsetup(log2n, Int32(kFFTRadix2))
         
         var output = DSPSplitComplex(repeating: 0, count: binCount)
-        defer {
-            output.deallocate()
-        }
+        
+//        defer {
+//            output.deallocate()
+//        }
 
         let windowSize = Int(buffer.frameLength)
         var transferBuffer = [Float](repeating: 0, count: bufferSizePOT)
@@ -150,12 +154,14 @@ public final class AudioSample: NSObject, ObservableObject {
         // Perform the FFT
         vDSP_fft_zrip(fftSetup!, &output, 1, log2n, FFTDirection(FFT_FORWARD))
 
-        let scaledBinCount = 16
+        let scaledBinCount = fftBins
         
         // Parseval's theorem - Scale with respect to the number of bins
         var scaledOutput = DSPSplitComplex(repeating: 0, count: scaledBinCount)
         var scaleMultiplier = DSPSplitComplex(repeatingReal: 1.0 / Float(scaledBinCount), repeatingImag: 0, count: 1)
+        
         defer {
+            output.deallocate()
             scaledOutput.deallocate()
             scaleMultiplier.deallocate()
         }
@@ -239,6 +245,7 @@ public extension DSPSplitComplex {
     }
 
     func deallocate() {
+        //TODO: crash, malloc error
         realp.deallocate()
         imagp.deallocate()
     }

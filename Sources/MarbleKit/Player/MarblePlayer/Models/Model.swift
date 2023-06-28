@@ -45,6 +45,8 @@ protocol MarblePlayerSourceDelegate: AnyObject {
     func sourceDidFinished()
     func sourceDidChange(oldBitRate: Int64, newBitrate: Int64)
     func sourceDidOutputAudio(buffer: AVAudioPCMBuffer?)
+    func sourceIsNotInSync(videoTime: CMTime, audioTimeDesired: TimeInterval)
+    func sourceClock(_ type: ClockProcessType)
 }
 
 // MARK: protocol

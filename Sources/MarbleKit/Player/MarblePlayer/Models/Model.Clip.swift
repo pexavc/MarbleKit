@@ -85,6 +85,7 @@ extension Clip {
         
         print("[Clip] Prepared: videoFrames: \(self.videoFrames.count), audioFrames: \(self.audioFrames.count) ")
         
+        #if os(macOS)
         DispatchQueue.main.async {
             let panel = NSSavePanel()
             panel.nameFieldLabel = "Save clip as:"
@@ -101,6 +102,7 @@ extension Clip {
                 }
             }
         }
+        #endif
     }
 }
 

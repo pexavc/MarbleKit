@@ -113,21 +113,27 @@ final class AudioEnginePlayer: AudioPlayer, MarblePlayerFrameOutput {
         }
     }
 
+    //MixerNode's volume attribute is not updating playback volume
     var volume: Float {
         get {
             engine.mainMixerNode.outputVolume
         }
         set {
+            _lastVolume = newValue
+            
+            guard isMuted == false else { return }
             engine.mainMixerNode.outputVolume = newValue
         }
     }
+    
+    private var _lastVolume: Float = MarblePlayerOptions.defaultVolume
 
     public var isMuted: Bool {
         get {
             engine.mainMixerNode.outputVolume == 0.0
         }
         set {
-            engine.mainMixerNode.outputVolume = newValue ? 0.0 : volume
+            engine.mainMixerNode.outputVolume = newValue ? 0.0 : _lastVolume
         }
     }
 
@@ -151,7 +157,7 @@ final class AudioEnginePlayer: AudioPlayer, MarblePlayerFrameOutput {
         engine.attach(dynamicsProcessor)
         engine.attach(timePitch)
         //Default volume
-        engine.mainMixerNode.outputVolume = 0.5
+        engine.mainMixerNode.outputVolume = MarblePlayerOptions.defaultVolume
         engine.connect(nodes: [sourceNode, dynamicsProcessor, timePitch, engine.mainMixerNode], format: audioFormat)
         if let audioUnit = engine.outputNode.audioUnit {
             addRenderNotify(audioUnit: audioUnit)

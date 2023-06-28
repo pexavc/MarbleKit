@@ -123,45 +123,47 @@ public struct MetalViewUI: UIViewRepresentable {
         
     }
 
-    public typealias UIViewType = MTKView
+    public typealias UIViewType = MetalView
     
-    public var metalContext = MetalContext()
-    private weak var renderer: MetalViewUIDelegate?
-    
-    public init(renderer: MetalViewUIDelegate?) {
-        self.renderer = renderer
-        self.renderer?.metalContext = metalContext
+    public init() {
+        
     }
     
     public func makeCoordinator() -> Coordinator {
         Coordinator()
     }
     
-    public func makeUIView(context: Context) -> MTKView {
+    public func makeUIView(context: Context) -> MetalView {
         
         let metalView = context.coordinator.metalView
-        metalView.device = self.metalContext.device
-        metalView.delegate = self.renderer
+        
+        metalView.mtkView.device = context.environment.marbleRemote?.metalContext.device
+        metalView.mtkView.delegate = context.environment.marbleRemote
         metalView.apply(context.environment)
         
         context.coordinator.setNeedsDisplayTrigger = context.environment.setNeedsDisplayTrigger
+        context.coordinator.scalingMode = context.environment.scalingMode
+        context.coordinator.contentSize = context.environment.contentSize
         
         return metalView
     }
     
-    public func updateUIView(_ uiView: MTKView, context: Context) {
-        
+    public func updateUIView(_ nsView: MetalView, context: Context) {
         context.coordinator.metalView.apply(context.environment)
+        
         context.coordinator.setNeedsDisplayTrigger = context.environment.setNeedsDisplayTrigger
-        print("UPDATE VIEW")
+        context.coordinator.scalingMode = context.environment.scalingMode
+        context.coordinator.contentSize = context.environment.contentSize
+        
+        print("[MetalViewUI] \(context.environment.preferredFramesPerSecond)fps set")
     }
     
     public class Coordinator {
         
         private var cancellable: AnyCancellable?
         
-        public var metalView: MTKView = {
-            MTKView(frame: .zero)
+        public var metalView: MetalView = {
+            MetalView(frame: .zero)
         }()
         
         public var setNeedsDisplayTrigger: SetNeedsDisplayTrigger? {
@@ -171,14 +173,34 @@ public struct MetalViewUI: UIViewRepresentable {
                 self.cancellable = self.setNeedsDisplayTrigger?.receive(on: DispatchQueue.main).sink { [weak self] in
                     
                     guard let self = self,
-                          self.metalView.isPaused,
-                          self.metalView.enableSetNeedsDisplay
+                          self.metalView.mtkView.isPaused,
+                          self.metalView.mtkView.enableSetNeedsDisplay
                     else { return }
                     
-                    self.metalView.setNeedsDisplay()
+                    self.metalView.setNeedsDisplay(self.metalView.bounds)
                     
                 }
                 
+            }
+            
+        }
+        
+        public var contentSize : CGSize = CGSize(width: 640, height: 480) {
+                
+            didSet {
+                DispatchQueue.main.async {
+                    self.metalView.contentSize = self.contentSize
+                }
+            }
+            
+        }
+        
+        public var scalingMode : ScalingMode = .scaleAspectFit {
+                
+            didSet {
+                DispatchQueue.main.async {
+                    self.metalView.scalingMode = self.scalingMode
+                }
             }
             
         }

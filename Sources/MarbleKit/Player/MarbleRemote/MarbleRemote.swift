@@ -18,7 +18,7 @@ public class MarbleRemote: NSObject, ObservableObject {
     public static var current: MarbleRemote = .init()
     
     public static var enableFX: Bool = false
-    public static var fx: [MarbleEffect] = [.godRay]
+    public static var fx: [MarbleEffect] = []
     
     @Published var fps: Float = MarblePlayerOptions.preferredFramesPerSecond.floatValue
     @Published var selectedResolution: MarbleRemoteConfig.Resolution
@@ -41,7 +41,7 @@ public class MarbleRemote: NSObject, ObservableObject {
     private let marble: MarbleEngine = .init()
     private var renderer: MetalRender = .init()
     
-    private lazy var displayLink: CADisplayLink = .init(target: self, selector: #selector(render(in:)))
+    private lazy var displayLink: CADisplayLink? = nil// = .init(target: self, selector: #selector(render(in:)))
     
     override init() {
         self.config = .init(name: "NONE", kind: .twitch, streams: [])
@@ -61,11 +61,6 @@ public class MarbleRemote: NSObject, ObservableObject {
         MarblePlayerOptions.firstPlayerType = MarblePlayer.self
         MarblePlayerOptions.secondPlayerType = MarblePlayer.self
         MarblePlayerOptions.logLevel = .info//.debug
-        MarblePlayerOptions.isAutoPlay = false
-        MarblePlayerOptions.isSeekedAutoPlay = false
-        MarblePlayerOptions.preferredForwardBufferDuration = 12
-        MarblePlayerOptions.maxBufferDuration = 48
-        MarblePlayerOptions.dropVideoFrame = true
         
         $shouldLowerResolution
             .dropFirst()
@@ -100,7 +95,7 @@ public class MarbleRemote: NSObject, ObservableObject {
         
         print("[MarbleRemote] added video & audio")
         
-        self.displayLink.add(to: .main, forMode: .common)
+        self.displayLink?.add(to: .main, forMode: .common)
         
         self.audioVideoOutput?.play()
     }
@@ -109,9 +104,7 @@ public class MarbleRemote: NSObject, ObservableObject {
 //MARK: Audio Setup
 extension MarbleRemote {
     func setupAudioVideo(url: URL, delay: Double = 0.0) {
-        
         options.audioDelay = delay
-        options.isAutoPlay = false
         options.syncDecodeAudio = false
         options.syncDecodeVideo = false
         
@@ -127,6 +120,7 @@ extension MarbleRemote {
 extension MarbleRemote: MarblePlayerDelegate {
     public func readyToPlay(player: some MarblePlayerProtocol) {
         self.fps = self.audioVideoOutput?.fps ?? 60
+        //displayLink.preferredFramesPerSecond = Int(ceil(self.fps)) << 1
         
         //TODO: isLiveStream should be a getter from remoteConfig
         let metadata = MarbleNowPlayableMetadata(mediaType: .video,
@@ -137,12 +131,13 @@ extension MarbleRemote: MarblePlayerDelegate {
         MPNowPlayingInfoCenter.default().nowPlayingInfo = metadata.nowPlayingInfo
     }
     
-    public func changeLoadState(player: some MarblePlayerProtocol) {
-        
+    public func changeLoadState(player: some MarblePlayerProtocol, loadState: MarbleMediaLoadState) {
+        BufferingProgress.shared.update(loadState: loadState)
     }
     
-    public func changeBuffering(player: some MarblePlayerProtocol, progress: Int) {
-        
+    public func changeBuffering(player: some MarblePlayerProtocol,
+                                progress: Int) {
+        BufferingProgress.shared.update(progress: progress)
     }
     
     public func playBack(player: some MarblePlayerProtocol, loopCount: Int) {
@@ -159,6 +154,10 @@ extension MarbleRemote: MarblePlayerDelegate {
     public func finish(player: some MarblePlayerProtocol, error: Error?) {
         
     }
+    
+    public func clockProcessChanged(_ type: ClockProcessType) {
+        BufferingProgress.shared.update(clockType: type)
+    }
 }
 
 //MARK: Marble MetalViewDelegate + Rendering
@@ -167,12 +166,16 @@ extension MarbleRemote: MetalViewUIDelegate {
     
     public func draw(in view: MTKView) {
         autoreleasepool {
-            guard audioVideoOutput?.loadState == .playable,
-                  let inputTexture = self.currentTexture else {
+            guard audioVideoOutput?.loadState == .playable else {
                 
                 if let drawable = view.currentDrawable {
                     self.clear(drawable)
                 }
+                
+                return
+            }
+            
+            guard let inputTexture = render() else {
                 return
             }
             
@@ -197,31 +200,42 @@ extension MarbleRemote: MetalViewUIDelegate {
         }
     }
     
+    func clear(_ drawable: CAMetalDrawable) {
+        renderer.clear(drawable: drawable)
+    }
+    
+    
     @objc func render(in _: Any) {
         autoreleasepool {
-            guard audioVideoOutput?.loadState == .playable,
-                  let videoFrame = audioVideoOutput?.getVideoFrame(),
-                  let buffer = videoFrame.corePixelBuffer else {
-                return
-            }
-            
-            guard let texture = prepare(buffer) else {
-                return
-            }
-            
-            let inputTexture = renderFX(texture)
-            
-            self.videoClip.update(videoFrame.cmtime,
-                                  fps: fps,
-                                  buffer: buffer,
-                                  texture: inputTexture)
-            
-            self.currentTexture = inputTexture
+            self.currentTexture = render()
         }
     }
     
-    func clear(_ drawable: CAMetalDrawable) {
-        renderer.clear(drawable: drawable)
+    func render() -> MTLTexture? {
+        guard audioVideoOutput?.loadState == .playable,
+              //This will pop the render queue's circular buffer
+              //Potentially can get out of sync
+              //if video is pulling faster or slower than
+              //audios'
+              let videoFrame = audioVideoOutput?.getVideoFrame(),
+              let buffer = videoFrame.corePixelBuffer else {
+            return nil
+        }
+        
+        audioVideoOutput?.setVideo(time: videoFrame.cmtime)
+        
+        guard let texture = prepare(buffer) else {
+            return nil
+        }
+        
+        let inputTexture = renderFX(texture)
+        
+        self.videoClip.update(videoFrame.cmtime,
+                              fps: fps,
+                              buffer: buffer,
+                              texture: inputTexture)
+        
+        return inputTexture
     }
     
     func prepare(_ buffer: CVPixelBuffer) -> MTLTexture? {
@@ -285,15 +299,19 @@ extension MarbleRemote: MetalViewUIDelegate {
 public extension MarbleRemote {
     func play() {
         audioVideoOutput?.play()
+        displayLink?.isPaused = false
     }
     
     func pause() {
         audioVideoOutput?.pause()
+        displayLink?.isPaused = true
     }
     
     func shutdown() {
         MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
-        displayLink.invalidate()
+        displayLink?.invalidate()
+        displayLink = nil
+        
         audioVideoOutput?.shutdown()
         
         self.videoClip.reset()

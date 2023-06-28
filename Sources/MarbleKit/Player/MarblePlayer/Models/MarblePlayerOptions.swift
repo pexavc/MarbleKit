@@ -383,6 +383,8 @@ public extension MarblePlayerOptions {
     
     static var forcePreferredFPS: Bool = false
     
+    static var defaultVolume: Float = 0.5
+    
     static var sampleRate: Double = 44100
     
     @available(macOS 11.0, iOS 14.0, watchOS 7.0, tvOS 14.0, *)

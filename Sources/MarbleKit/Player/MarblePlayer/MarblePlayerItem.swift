@@ -127,6 +127,7 @@ final class MarblePlayerItem {
     }()
 
     weak var delegate: MarblePlayerSourceDelegate?
+    
     init(url: URL, options: MarblePlayerOptions) {
         self.url = url
         self.options = options
@@ -361,7 +362,9 @@ extension MarblePlayerItem {
             videoIndex = av_find_best_stream(formatCtx, AVMEDIA_TYPE_VIDEO, wantedStreamNb, -1, nil, 0)
             if let first = videos.first(where: { $0.trackID == videoIndex }) {
                 first.isEnabled = true
+                
                 let rotation = first.rotation
+                
                 if rotation > 0, options.autoRotate {
                     options.hardwareDecode = false
                     if abs(rotation - 90) <= 1 {
@@ -375,11 +378,15 @@ extension MarblePlayerItem {
                         options.videoFilters.append("rotate=\(rotation)*PI/180")
                     }
                 }
+                
                 naturalSize = abs(rotation - 90) <= 1 || abs(rotation - 270) <= 1 ? first.naturalSize.reverse : first.naturalSize
+                
                 let track = options.syncDecodeVideo ? SyncPlayerItemTrack<VideoVTBFrame>(assetTrack: first, options: options) : AsyncPlayerItemTrack<VideoVTBFrame>(assetTrack: first, options: options)
+                
                 track.delegate = self
                 allPlayerItemTracks.append(track)
                 videoTrack = track
+                
                 if videos.count > 1, options.videoAdaptable {
                     let bitRateState = VideoAdaptationState.BitRateState(bitRate: first.bitRate, time: CACurrentMediaTime())
                     videoAdaptation = VideoAdaptationState(bitRates: bitRates.sorted(by: <), duration: duration, fps: first.nominalFrameRate, bitRateStates: [bitRateState])
@@ -777,11 +784,17 @@ extension MarblePlayerItem: MarblePlayerRenderSourceDelegate {
         
         let frame = videoTrack.getOutputRender(where: predicate)
         
-        if let frame, options.dropVideoFrame, !isAudioStalled {
+        if let frame, !isAudioStalled {
             let type = options.videoClockSync(audioTime: desire, videoTime: frame.seconds)
+            delegate?.sourceClock(type)
             switch type {
             case .drop:
-                return nil
+                if options.dropVideoFrame {
+                    return nil
+                } else {
+                    delegate?.sourceIsNotInSync(videoTime: frame.cmtime, audioTimeDesired: desire)
+                    break
+                }
             case .seek:
                 videoTrack.outputRenderQueue.flush()
                 videoTrack.seekTime = desire

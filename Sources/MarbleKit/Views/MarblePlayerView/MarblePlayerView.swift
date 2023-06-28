@@ -14,6 +14,8 @@ public struct MarblePlayerView: View {
     let config: MarbleRemoteConfig
     
     public init(_ config: MarbleRemoteConfig) {
+        print("[MarblePlayerView] Initializing")
+        
         MarbleRemote.current.shutdown()
         MarbleRemote.current = .init(config: config)
         self.config = config
