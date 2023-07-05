@@ -112,7 +112,7 @@ metalContext
 texture.pixelBuffer?
 ```
 
-[CVPixelBuffer -> MTLTexture] (https://github.com/pexavc/MarbleKit/blob/main/Sources/MarbleKit/Engine/Core/Metal/Helpers/Extension/CVPixelBuffer/CVPixelBuffer.swift#L81-L107)
+[CVPixelBuffer -> MTLTexture](https://github.com/pexavc/MarbleKit/blob/main/Sources/MarbleKit/Engine/Core/Metal/Helpers/Extension/CVPixelBuffer/CVPixelBuffer.swift#L81-L107)
 
 ```swift
 //context is a reference to a local MetalContext if one is available
@@ -236,6 +236,5 @@ A basic speech to text CoreML model will be added for real-time closed captionin
 
 
 ## TODO
-- [ ] Stress testing and stability
 - [ ] Vague audio channel layouts not being compatible with MarblePlayer
 - [ ] Memory Leaks (Packet/Frame decoding primarily)
