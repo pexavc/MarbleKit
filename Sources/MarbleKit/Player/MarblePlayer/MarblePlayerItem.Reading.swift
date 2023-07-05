@@ -2,7 +2,7 @@
 //  MarblePlayerItem.Reading.swift
 //  
 //
-//  Created by Ritesh Pakala on 7/4/23.
+//  Created by PEXAVC on 7/4/23.
 //
 
 import AVFoundation
