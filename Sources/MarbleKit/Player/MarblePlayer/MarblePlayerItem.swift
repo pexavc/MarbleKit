@@ -510,6 +510,8 @@ extension MarblePlayerItem: MarbleMediaPlayback {
             avformat_close_input(&self.formatCtx)
             avformat_close_input(&self.outputFormatCtx)
             
+            //avformat_close_input should be calling free_context within
+            //https://ffmpeg.org/doxygen/4.1/libavformat_2utils_8c_source.html#l04427
             avformat_free_context(self.formatCtx)
             avformat_free_context(self.outputFormatCtx)
             
@@ -519,7 +521,9 @@ extension MarblePlayerItem: MarbleMediaPlayback {
             self.closeOperation = nil
             self.operationQueue.cancelAllOperations()
             
-            avformat_close_input(&self.altFormatCtx)
+            //Should be closed from the timer's call stack
+            //avformat_close_input(&self.altFormatCtx)
+            //avformat_free_context(self.altFormatCtx)
             self.setAudioOperationQueue.cancelAllOperations()
             self.probeCodecOperationQueue.cancelAllOperations()
             

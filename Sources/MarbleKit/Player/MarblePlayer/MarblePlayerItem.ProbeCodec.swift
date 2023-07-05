@@ -13,6 +13,7 @@ import Libavformat
 
 internal extension MarblePlayerItem {
     func probeCodec() {
+        guard state == .reading else { return }
         print("[MarblePlayer] Probe Codec")
         avformat_close_input(&self.altFormatCtx)
         altFormatCtx = avformat_alloc_context()
@@ -58,6 +59,7 @@ internal extension MarblePlayerItem {
         }
         
         avformat_close_input(&self.altFormatCtx)
+        avformat_free_context(self.altFormatCtx)
         
         guard fps != foundFPS,
               lastProbedFPS != foundFPS else {

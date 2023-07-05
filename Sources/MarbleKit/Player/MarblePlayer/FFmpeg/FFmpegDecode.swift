@@ -141,9 +141,13 @@ class FFmpegDecode: DecodeProtocol {
     }
 
     func shutdown() {
+        clear()
+        swresample.shutdown()
+    }
+    
+    func clear() {
         av_frame_free(&coreFrame)
         avcodec_free_context(&codecContext)
-        swresample.shutdown()
     }
 
     func decode() {

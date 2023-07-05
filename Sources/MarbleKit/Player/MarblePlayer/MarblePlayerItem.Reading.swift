@@ -49,28 +49,6 @@ internal extension MarblePlayerItem {
             if let first, first.isEnabled {
                 packet.assetTrack = first
                 if first.mediaType == .video {
-                    
-//                    //Handle new framerate if any
-//                    //TODO: make re-usable see FFmpegAssetTrack l:53
-//                    if let stream = formatCtx?.pointee.streams[Int(corePacket.pointee.stream_index)] {
-//                        var timebase = Timebase(corePacket.pointee.time_base)
-//                        if timebase.num <= 0 || timebase.den <= 0 {
-//                            timebase = Timebase(num: 1, den: 1000)
-//                        }
-//                        
-//                        let frameRate = stream.pointee.avg_frame_rate
-//                        var nominalFrameRate: Float = 0
-//                        if stream.pointee.duration > 0, stream.pointee.nb_frames > 0, stream.pointee.nb_frames != stream.pointee.duration {
-//                            nominalFrameRate = Float(stream.pointee.nb_frames) * Float(timebase.den) / Float(stream.pointee.duration) * Float(timebase.num)
-//                        } else if frameRate.den > 0, frameRate.num > 0 {
-//                            nominalFrameRate = Float(frameRate.num) / Float(frameRate.den)
-//                        }
-//                        if videoTrack?.fps != nominalFrameRate && nominalFrameRate > .zero {
-//                            print("[MarblePlayerItem] newFPS: \(nominalFrameRate)")
-//                            delegate?.packetReceivedFPS(nominalFrameRate)
-//                        }
-//                    }
-                    
                     if options.readVideoTime == 0 {
                         options.readVideoTime = CACurrentMediaTime()
                     }
