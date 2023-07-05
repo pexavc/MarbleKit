@@ -1,0 +1,16 @@
+{
+  "object": {
+    "pins": [
+      {
+        "package": "FFmpegKit",
+        "repositoryURL": "https://github.com/pexavc/FFmpegKit.git",
+        "state": {
+          "branch": null,
+          "revision": "89f71ccee33d1ff402201162f28b6400f349c873",
+          "version": "1.0.0"
+        }
+      }
+    ]
+  },
+  "version": 1
+}

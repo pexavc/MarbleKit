@@ -11,7 +11,7 @@ import AudioToolbox
 import Foundation
 
 public class Clip {
-    static var maxDuration: Double = 5
+    public static var maxDuration: Double = 5
     
     static var shared: Clip = .init()
     
