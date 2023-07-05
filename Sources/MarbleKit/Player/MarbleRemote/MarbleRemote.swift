@@ -13,12 +13,17 @@ import Accelerate
 import AudioToolbox
 import MetalKit
 import MediaPlayer
+import Libavformat
 
 public class MarbleRemote: NSObject, ObservableObject {
     public static var current: MarbleRemote = .init()
     
     public static var enableFX: Bool = false
     public static var fx: [MarbleEffect] = []
+    
+    public static func initializeNetwork() {
+        avformat_network_init()
+    }
     
     @Published var fps: Float = MarblePlayerOptions.preferredFramesPerSecond.floatValue
     @Published var selectedResolution: MarbleRemoteConfig.Resolution
@@ -41,7 +46,8 @@ public class MarbleRemote: NSObject, ObservableObject {
     private let marble: MarbleEngine = .init()
     private var renderer: MetalRender = .init()
     
-    private lazy var displayLink: CADisplayLink? = nil// = .init(target: self, selector: #selector(render(in:)))
+    //TODO: ideally either MTL callback or this is sole runloop
+    private lazy var displayLink: CADisplayLink? = .init(target: self, selector: #selector(render(in:)))
     
     override init() {
         self.config = .init(name: "NONE", kind: .twitch, streams: [])
@@ -61,6 +67,8 @@ public class MarbleRemote: NSObject, ObservableObject {
         MarblePlayerOptions.firstPlayerType = MarblePlayer.self
         MarblePlayerOptions.secondPlayerType = MarblePlayer.self
         MarblePlayerOptions.logLevel = .info//.debug
+        
+        self.options = .init()
         
         $shouldLowerResolution
             .dropFirst()
@@ -107,6 +115,8 @@ extension MarbleRemote {
         options.audioDelay = delay
         options.syncDecodeAudio = false
         options.syncDecodeVideo = false
+        //options.cache = true
+        //options.maxAnalyzeDuration = Int64(MarblePlayerOptions.maxBufferDuration)
         
         let player: MarblePlayer = .init(url: url, options: options)
         
@@ -120,7 +130,7 @@ extension MarbleRemote {
 extension MarbleRemote: MarblePlayerDelegate {
     public func readyToPlay(player: some MarblePlayerProtocol) {
         self.fps = self.audioVideoOutput?.fps ?? 60
-        //displayLink.preferredFramesPerSecond = Int(ceil(self.fps)) << 1
+        displayLink?.preferredFramesPerSecond = Int(ceil(self.fps)) << 1
         
         //TODO: isLiveStream should be a getter from remoteConfig
         let metadata = MarbleNowPlayableMetadata(mediaType: .video,
@@ -157,10 +167,20 @@ extension MarbleRemote: MarblePlayerDelegate {
     
     public func clockProcessChanged(_ type: ClockProcessType) {
         BufferingProgress.shared.update(clockType: type)
+        
+        //TODO: detect frame drop, restart, if not restarting
+//        DispatchQueue.main.async { [weak self] in
+//            if type == .drop {
+//                self?.audioVideoOutput?.restart(playerItemOnly: true)
+//            }
+//        }
     }
     
     public func fpsChanged(_ fps: Float) {
-        self.fps = fps
+        DispatchQueue.main.async { [weak self] in
+            self?.fps = fps
+            self?.displayLink?.preferredFramesPerSecond = Int(ceil(self?.fps ?? MarblePlayerOptions.preferredFramesPerSecond.floatValue)) << 1
+        }
     }
 }
 
@@ -179,7 +199,8 @@ extension MarbleRemote: MetalViewUIDelegate {
                 return
             }
             
-            guard let inputTexture = render() else {
+            //TODO: call render() directly if DisplayLink is not being used
+            guard let inputTexture = self.currentTexture else {//render() else {
                 return
             }
             
@@ -317,7 +338,12 @@ public extension MarbleRemote {
         displayLink = nil
         
         audioVideoOutput?.shutdown()
+        BufferingProgress.shared.reset()
         
+        clearClipCache()
+    }
+    
+    func clearClipCache() {
         self.videoClip.reset()
         self.audioVideoOutput?.resetAudioClip()
         Clip.shared.reset()
@@ -352,6 +378,10 @@ public extension MarbleRemote {
         set {
             self.audioVideoOutput?.playbackVolume = newValue
         }
+    }
+    
+    func fireMarblePlayerItemDebug() {
+        self.audioVideoOutput?.firePlayerItemDebug()
     }
 }
 

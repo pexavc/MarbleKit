@@ -22,6 +22,7 @@ enum MarblePlayerSourceState {
     case finished
     case closed
     case failed
+    case restarting
 }
 
 // MARK: delegate
@@ -48,6 +49,7 @@ protocol MarblePlayerSourceDelegate: AnyObject {
     func sourceIsNotInSync(videoTime: CMTime, audioTimeDesired: TimeInterval)
     func sourceClock(_ type: ClockProcessType)
     func packetReceivedFPS(_ fps: Float)
+    func probedCodecReceivedFPS(_ fps: Float)
 }
 
 // MARK: protocol

@@ -12,26 +12,28 @@ import Libavfilter
 import Libavformat
 
 final class MarblePlayerItem {
-    private let url: URL
-    private let options: MarblePlayerOptions
+    internal let url: URL
+    internal let options: MarblePlayerOptions
     private let operationQueue = OperationQueue()
     private var setAudioOperationQueue: OperationQueue = .init()
+    private var probeCodecOperationQueue: OperationQueue = .init()
     private let condition = NSCondition()
-    private var formatCtx: UnsafeMutablePointer<AVFormatContext>?
-    private var outputFormatCtx: UnsafeMutablePointer<AVFormatContext>?
-    private var outputPacket: UnsafeMutablePointer<AVPacket>?
-    private var streamMapping = [Int: Int]()
-    private var openOperation: BlockOperation?
-    private var readOperation: BlockOperation?
-    private var closeOperation: BlockOperation?
-    private var seekingCompletionHandler: ((Bool) -> Void)?
+    internal var formatCtx: UnsafeMutablePointer<AVFormatContext>?
+    internal var altFormatCtx: UnsafeMutablePointer<AVFormatContext>?
+    internal var outputFormatCtx: UnsafeMutablePointer<AVFormatContext>?
+    internal var outputPacket: UnsafeMutablePointer<AVPacket>?
+    internal var streamMapping = [Int: Int]()
+    internal var openOperation: BlockOperation?
+    internal var readOperation: BlockOperation?
+    internal var closeOperation: BlockOperation?
+    internal var seekingCompletionHandler: ((Bool) -> Void)?
     // No audio data found
-    private var isAudioStalled = true
-    private var videoMediaTime = CACurrentMediaTime()
-    private var isFirst = true
-    private var isSeek = false
-    private var allPlayerItemTracks = [PlayerItemTrackProtocol]()
-    private var videoAudioTracks: [CapacityProtocol] {
+    internal var isAudioStalled = true
+    internal var videoMediaTime = CACurrentMediaTime()
+    internal var isFirst = true
+    internal var isSeek = false
+    internal var allPlayerItemTracks = [PlayerItemTrackProtocol]()
+    internal var videoAudioTracks: [CapacityProtocol] {
         var tracks = [CapacityProtocol]()
         if let audioTrack {
             tracks.append(audioTrack)
@@ -42,22 +44,23 @@ final class MarblePlayerItem {
         return tracks
     }
 
-    private var videoTrack: SyncPlayerItemTrack<VideoVTBFrame>?
-    private var audioTrack: SyncPlayerItemTrack<AudioFrame>?
+    internal var videoTrack: SyncPlayerItemTrack<VideoVTBFrame>?
+    internal var audioTrack: SyncPlayerItemTrack<AudioFrame>?
     private(set) var assetTracks = [FFmpegAssetTrack]()
-    private var videoAdaptation: VideoAdaptationState?
+    internal var videoAdaptation: VideoAdaptationState?
     private(set) var currentPlaybackTime = TimeInterval(0)
     private(set) var startTime = TimeInterval(0)
     private(set) var duration: TimeInterval = 0
     private(set) var naturalSize = CGSize.zero
+    internal var lastProbedFPS: Float = 0
     
     //TODO: meant for in-sync AVisuals
-    private var lastAudioFrame: AudioFrame? = nil
+    internal var lastAudioFrame: AudioFrame? = nil
     
     //Caching audio renders
-    private var audioClip: AudioClip = .init()
+    internal var audioClip: AudioClip = .init()
     
-    private var error: NSError? {
+    internal var error: NSError? {
         didSet {
             if error != nil {
                 state = .failed
@@ -65,19 +68,22 @@ final class MarblePlayerItem {
         }
     }
 
-    private var state = MarblePlayerSourceState.idle {
+    internal var state = MarblePlayerSourceState.idle {
         didSet {
             switch state {
             case .opened:
                 delegate?.sourceDidOpened()
             case .reading:
                 timer.fireDate = Date.distantPast
+                timerProbeCodec.fireDate = Date.distantPast
             case .closed:
                 timer.invalidate()
+                timerProbeCodec.invalidate()
             case .failed:
                 delegate?.sourceDidFailed(error: error)
                 timer.fireDate = Date.distantFuture
-            case .idle, .opening, .seeking, .paused, .finished:
+                timerProbeCodec.fireDate = Date.distantFuture
+            case .idle, .opening, .seeking, .paused, .finished, .restarting:
                 break
             }
         }
@@ -86,9 +92,16 @@ final class MarblePlayerItem {
     private lazy var timer: Timer = .scheduledTimer(withTimeInterval: 0.02, repeats: true) { [weak self] _ in
         self?.codecDidChangeCapacity()
     }
+    
+    internal lazy var timerProbeCodec: Timer = .scheduledTimer(withTimeInterval: 3.0, repeats: true) { [weak self] _ in
+        self?.probeCodecOperationQueue.addOperation { [weak self] in
+            self?.probeCodec()
+        }
+    }
 
     private lazy var onceInitial: Void = {
-        avformat_network_init()
+        //Moved to a static call in MarbleRemote `initializeNetwork`
+        //avformat_network_init()
         av_log_set_callback { ptr, level, format, args in
             guard let format else {
                 return
@@ -132,6 +145,7 @@ final class MarblePlayerItem {
         self.url = url
         self.options = options
         timer.fireDate = Date.distantFuture
+        timerProbeCodec.fireDate = Date.distantFuture
         operationQueue.name = "marblekit.playeritem.read.queue_" + String(describing: self).components(separatedBy: ".").last!
         operationQueue.maxConcurrentOperationCount = 1
         operationQueue.qualityOfService = .userInteractive
@@ -140,6 +154,10 @@ final class MarblePlayerItem {
         setAudioOperationQueue.name = "marblekit.playeritem.setAudio.queue"
         setAudioOperationQueue.maxConcurrentOperationCount = 1
         setAudioOperationQueue.qualityOfService = .userInteractive
+        
+        probeCodecOperationQueue.name = "marblekit.probeCodec.queue"
+        probeCodecOperationQueue.maxConcurrentOperationCount = 1
+        probeCodecOperationQueue.qualityOfService = .background
         
         _ = onceInitial
     }
@@ -177,7 +195,7 @@ final class MarblePlayerItem {
 // MARK: private functions
 
 extension MarblePlayerItem {
-    private func openThread() {
+    internal func openThread() {
         avformat_close_input(&self.formatCtx)
         formatCtx = avformat_alloc_context()
         guard let formatCtx else {
@@ -192,7 +210,7 @@ extension MarblePlayerItem {
             }
             let formatContext = Unmanaged<MarblePlayerItem>.fromOpaque(ctx).takeUnretainedValue()
             switch formatContext.state {
-            case .finished, .closed, .failed:
+            case .finished, .closed, .failed, .restarting:
                 return 1
             default:
                 return 0
@@ -267,65 +285,7 @@ extension MarblePlayerItem {
         }
     }
 
-    private func openOutput(url: URL) {
-        let filename = url.isFileURL ? url.path : url.absoluteString
-        var ret = avformat_alloc_output_context2(&outputFormatCtx, nil, nil, filename)
-        guard let outputFormatCtx, let formatCtx else {
-            MarblePlayerLog(NSError(errorCode: .formatOutputCreate, avErrorCode: ret))
-            return
-        }
-        var index = 0
-        var audioIndex: Int?
-        var videoIndex: Int?
-        let formatName = outputFormatCtx.pointee.oformat.pointee.name.flatMap { String(cString: $0) }
-        (0 ..< Int(formatCtx.pointee.nb_streams)).forEach { i in
-            if let inputStream = formatCtx.pointee.streams[i] {
-                let codecType = inputStream.pointee.codecpar.pointee.codec_type
-                if [AVMEDIA_TYPE_AUDIO, AVMEDIA_TYPE_VIDEO, AVMEDIA_TYPE_SUBTITLE].contains(codecType) {
-                    if codecType == AVMEDIA_TYPE_AUDIO {
-                        if let audioIndex {
-                            streamMapping[i] = audioIndex
-                            return
-                        } else {
-                            audioIndex = index
-                        }
-                    } else if codecType == AVMEDIA_TYPE_VIDEO {
-                        if let videoIndex {
-                            streamMapping[i] = videoIndex
-                            return
-                        } else {
-                            videoIndex = index
-                        }
-                    }
-                    if let outStream = avformat_new_stream(outputFormatCtx, nil) {
-                        streamMapping[i] = index
-                        index += 1
-                        
-                        avcodec_parameters_copy(outStream.pointee.codecpar, inputStream.pointee.codecpar)
-                        if codecType == AVMEDIA_TYPE_SUBTITLE, formatName == "mp4" || formatName == "mov" {
-                            outStream.pointee.codecpar.pointee.codec_id = AV_CODEC_ID_MOV_TEXT
-                        }
-                        if inputStream.pointee.codecpar.pointee.codec_id == AV_CODEC_ID_HEVC {
-                            outStream.pointee.codecpar.pointee.codec_tag = CMFormatDescription.MediaSubType.hevc.rawValue.bigEndian
-                        } else {
-                            outStream.pointee.codecpar.pointee.codec_tag = 0
-                        }
-                    }
-                }
-            }
-        }
-        
-        avio_open(&(outputFormatCtx.pointee.pb), filename, AVIO_FLAG_WRITE)
-        ret = avformat_write_header(outputFormatCtx, nil)
-        guard ret >= 0 else {
-            MarblePlayerLog(NSError(errorCode: .formatWriteHeader, avErrorCode: ret))
-            avformat_close_input(&self.outputFormatCtx)
-            return
-        }
-        outputPacket = av_packet_alloc()
-    }
-
-    private func createCodec(formatCtx: UnsafeMutablePointer<AVFormatContext>) {
+    internal func createCodec(formatCtx: UnsafeMutablePointer<AVFormatContext>) {
         allPlayerItemTracks.removeAll()
         assetTracks.removeAll()
         videoAdaptation = nil
@@ -458,7 +418,7 @@ extension MarblePlayerItem {
                     result = av_seek_frame(formatCtx, -1, timeStamp, options.seekFlags)
                 }
                 MarblePlayerLog("seek to \(time) spend Time: \(CACurrentMediaTime() - startTime)")
-                if state == .closed {
+                if state == .closed || state == .restarting {
                     break
                 }
                 isSeek = true
@@ -477,100 +437,13 @@ extension MarblePlayerItem {
         }
     }
 
-    private func reading() {
-        let packet = Packet()
-        guard let corePacket = packet.corePacket else {
-            return
-        }
-        let readResult = av_read_frame(formatCtx, corePacket)
-        if state == .closed {
-            return
-        }
-        if readResult == 0 {
-            if let outputFormatCtx, let formatCtx {
-                let index = Int(corePacket.pointee.stream_index)
-                if let outputIndex = streamMapping[index],
-                   let inputTb = formatCtx.pointee.streams[index]?.pointee.time_base,
-                   let outputTb = outputFormatCtx.pointee.streams[outputIndex]?.pointee.time_base
-                {
-                    av_packet_ref(outputPacket, corePacket)
-                    outputPacket?.pointee.stream_index = Int32(outputIndex)
-                    av_packet_rescale_ts(outputPacket, inputTb, outputTb)
-                    outputPacket?.pointee.pos = -1
-                    let ret = av_interleaved_write_frame(outputFormatCtx, outputPacket)
-                    if ret < 0 {
-                        MarblePlayerLog("can not av_interleaved_write_frame")
-                    }
-                }
-            }
-            if formatCtx?.pointee.pb?.pointee.eof_reached == 1 {
-                //TODO: need reconnect
-            }
-            if corePacket.pointee.size <= 0 {
-                return
-            }
-            packet.fill()
-            let first = assetTracks.first { $0.trackID == corePacket.pointee.stream_index }
-            if let first, first.isEnabled {
-                packet.assetTrack = first
-                if first.mediaType == .video {
-                    //Handle new framerate if any
-                    //TODO: make re-usable see FFmpegAssetTrack l:53
-                    if let stream = formatCtx?.pointee.streams[Int(corePacket.pointee.stream_index)] {
-                        var timebase = Timebase(corePacket.pointee.time_base)
-                        if timebase.num <= 0 || timebase.den <= 0 {
-                            timebase = Timebase(num: 1, den: 1000)
-                        }
-                        
-                        let frameRate = stream.pointee.avg_frame_rate
-                        var nominalFrameRate: Float = 0
-                        if stream.pointee.duration > 0, stream.pointee.nb_frames > 0, stream.pointee.nb_frames != stream.pointee.duration {
-                            nominalFrameRate = Float(stream.pointee.nb_frames) * Float(timebase.den) / Float(stream.pointee.duration) * Float(timebase.num)
-                        } else if frameRate.den > 0, frameRate.num > 0 {
-                            nominalFrameRate = Float(frameRate.num) / Float(frameRate.den)
-                        }
-                        if videoTrack?.fps != nominalFrameRate && nominalFrameRate > .zero {
-                            print("[MarblePlayerItem] newFPS: \(nominalFrameRate)")
-                            delegate?.packetReceivedFPS(nominalFrameRate)
-                        }
-                    }
-                    
-                    if options.readVideoTime == 0 {
-                        options.readVideoTime = CACurrentMediaTime()
-                    }
-                    videoTrack?.putPacket(packet: packet)
-                } else if first.mediaType == .audio {
-                    if options.readAudioTime == 0 {
-                        options.readAudioTime = CACurrentMediaTime()
-                    }
-                    audioTrack?.putPacket(packet: packet)
-                } else {
-                    first.subtitle?.putPacket(packet: packet)
-                }
-            }
-        } else {
-            if readResult == AVError.eof.code || formatCtx?.pointee.pb?.pointee.eof_reached == 1 {
-                if options.isLoopPlay, allPlayerItemTracks.allSatisfy({ !$0.isLoopModel }) {
-                    allPlayerItemTracks.forEach { $0.isLoopModel = true }
-                    _ = av_seek_frame(formatCtx, -1, Int64(startTime), AVSEEK_FLAG_BACKWARD)
-                } else {
-                    allPlayerItemTracks.forEach { $0.isEndOfFile = true }
-                    state = .finished
-                }
-            } else {
-                //                        if IS_AVERROR_INVALIDDATA(readResult)
-                error = .init(errorCode: .readFrame, avErrorCode: readResult)
-            }
-        }
-    }
-
-    private func pause() {
+    internal func pause() {
         if state == .reading {
             state = .paused
         }
     }
 
-    private func resume() {
+    internal func resume() {
         if state == .paused {
             state = .reading
             condition.signal()
@@ -617,9 +490,12 @@ extension MarblePlayerItem: MarbleMediaPlayback {
         }
     }
 
-    func shutdown() {
-        guard state != .closed else { return }
-        state = .closed
+    func shutdown(restart: Bool) {
+        guard state != .closed && state != .restarting else { return }
+        
+        self.timerProbeCodec.fireDate = Date.distantFuture
+        
+        state = restart ? .restarting : .closed
         av_packet_free(&outputPacket)
         if let outputFormatCtx {
             av_write_trailer(outputFormatCtx)
@@ -633,11 +509,23 @@ extension MarblePlayerItem: MarbleMediaPlayback {
             self.formatCtx?.pointee.interrupt_callback.callback = nil
             avformat_close_input(&self.formatCtx)
             avformat_close_input(&self.outputFormatCtx)
-            //TODO: might be best to never deinit and init during application start and only init once?
-            avformat_network_deinit()
+            
+            avformat_free_context(self.formatCtx)
+            avformat_free_context(self.outputFormatCtx)
+            
+//            //TODO: might be best to never deinit and init during application start and only init once?
+//            avformat_network_deinit()
             self.duration = 0
             self.closeOperation = nil
             self.operationQueue.cancelAllOperations()
+            
+            avformat_close_input(&self.altFormatCtx)
+            self.setAudioOperationQueue.cancelAllOperations()
+            self.probeCodecOperationQueue.cancelAllOperations()
+            
+            if restart {
+                self.prepareToPlay()
+            }
         }
         closeOperation.queuePriority = .veryHigh
         closeOperation.qualityOfService = .userInteractive
@@ -656,6 +544,11 @@ extension MarblePlayerItem: MarbleMediaPlayback {
             }
         }
         self.closeOperation = closeOperation
+    }
+    
+    func restart() {
+        self.timerProbeCodec.fireDate = Date.distantFuture
+        shutdown(restart: true)
     }
 
     func seek(time: TimeInterval, completion: @escaping ((Bool) -> Void)) {
@@ -702,6 +595,7 @@ extension MarblePlayerItem: MarbleCodecCapacityDelegate {
         if allSatisfy {
             delegate?.sourceDidFinished()
             timer.fireDate = Date.distantFuture
+            timerProbeCodec.fireDate = Date.distantFuture
             if options.isLoopPlay {
                 isAudioStalled = audioTrack == nil
                 audioTrack?.isLoopModel = false

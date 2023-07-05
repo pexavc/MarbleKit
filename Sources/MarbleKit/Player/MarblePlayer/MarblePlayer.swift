@@ -228,7 +228,7 @@ extension MarblePlayer: MarblePlayerSourceDelegate {
     }
     
     func sourceIsNotInSync(videoTime: CMTime, audioTimeDesired: TimeInterval) {
-        print("[MarblePlayer] Out of sync, V: \(videoTime.seconds) A: \(audioTimeDesired)")
+        //print("[MarblePlayer] Out of sync, V: \(videoTime.seconds) A: \(audioTimeDesired)")
     }
     
     func sourceClock(_ type: ClockProcessType) {
@@ -236,6 +236,10 @@ extension MarblePlayer: MarblePlayerSourceDelegate {
     }
     
     func packetReceivedFPS(_ fps: Float) {
+        self.delegate?.fpsChanged(fps)
+    }
+    
+    func probedCodecReceivedFPS(_ fps: Float) {
         self.delegate?.fpsChanged(fps)
     }
 }
@@ -314,7 +318,7 @@ extension MarblePlayer: MarblePlayerProtocol {
         playbackState = .paused
     }
 
-    public func shutdown() {
+    public func shutdown(restart: Bool) {
         MarblePlayerLog("shutdown \(self)")
         playbackState = .stopped
         loadState = .idle
@@ -333,6 +337,18 @@ extension MarblePlayer: MarblePlayerProtocol {
         options.readVideoTime = 0
         options.decodeAudioTime = 0
         options.decodeVideoTime = 0
+        
+        if restart {
+            playerItem.restart()
+        }
+    }
+    
+    public func restart(playerItemOnly: Bool) {
+        if playerItemOnly {
+            playerItem.restart()
+        } else {
+            shutdown(restart: true)
+        }
     }
 
     public func enterBackground() {}
@@ -374,6 +390,10 @@ extension MarblePlayer: MarblePlayerProtocol {
             }
         }
         playerItem.select(track: track)
+    }
+    
+    public func firePlayerItemDebug() {
+        playerItem.fireItemDebug()
     }
 }
 

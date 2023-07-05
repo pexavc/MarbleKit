@@ -70,15 +70,17 @@ public final class AudioSample: NSObject, ObservableObject {
         self.lastBuffer = buffer
         
         operationQueueFFT.addOperation {
-            let level = self.calculateDB(from: buffer)
-            self.amplitude = level.amplitude * 3
-            self.dB = level.dB
-            
-            let fft = level.dB <= AudioSample.silenceLimit ? .init(repeating: 0, count: AudioSample.fftBins) : self.performFFT(buffer: buffer, fftBins: AudioSample.fftBins)
-            
-            DispatchQueue.main.async {
-                if self.amplitude.isFinite && self.dB.isFinite {
-                    self.stats = Stats(amplitude: self.amplitude, dB: self.dB, fft: fft)
+            autoreleasepool {
+                let level = self.calculateDB(from: buffer)
+                self.amplitude = level.amplitude * 3
+                self.dB = level.dB
+                
+                let fft = level.dB <= AudioSample.silenceLimit ? .init(repeating: 0, count: AudioSample.fftBins) : self.performFFT(buffer: buffer, fftBins: AudioSample.fftBins)
+                
+                DispatchQueue.main.async {
+                    if self.amplitude.isFinite && self.dB.isFinite {
+                        self.stats = Stats(amplitude: self.amplitude, dB: self.dB, fft: fft)
+                    }
                 }
             }
         }

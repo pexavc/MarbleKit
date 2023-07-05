@@ -137,6 +137,14 @@ final class AudioEnginePlayer: AudioPlayer, MarblePlayerFrameOutput {
         }
     }
 
+    private lazy var renderSetAudioQueue: OperationQueue = {
+        let opQueue: OperationQueue = .init()
+        opQueue.qualityOfService = .background
+        opQueue.maxConcurrentOperationCount = 1
+        
+        return opQueue
+    }()
+    
     func prepare(audioFormat: AVAudioFormat) {
         engine.stop()
         engine.reset()
@@ -150,6 +158,7 @@ final class AudioEnginePlayer: AudioPlayer, MarblePlayerFrameOutput {
         //        engine.attach(distortion)
         //        engine.attach(delay)
         let sourceNode = AVAudioSourceNode(format: audioFormat) { [weak self] _, _, frameCount, audioBufferList in
+            //TODO: malloc bad access
             self?.audioPlayerShouldInputData(ioData: UnsafeMutableAudioBufferListPointer(audioBufferList), numberOfFrames: frameCount)
             return noErr
         }
@@ -199,10 +208,13 @@ final class AudioEnginePlayer: AudioPlayer, MarblePlayerFrameOutput {
             if currentRender == nil {
                 currentRender = renderSource?.getAudioOutputRender()
                 
-                if let currentRender {
+                renderSetAudioQueue.addOperation { [weak self] in
                     
-                    let currentPreparePosition = currentRender.position + currentRender.duration * Int64(self.currentRenderReadOffset) / Int64(currentRender.numberOfSamples)
-                    renderSource?.setAudio(time: currentRender.timebase.cmtime(for: currentPreparePosition), frame: currentRender)
+                    if let currentRender = self?.currentRender {
+                        
+                        let currentPreparePosition = currentRender.position + currentRender.duration * Int64(self?.currentRenderReadOffset ?? 0) / Int64(currentRender.numberOfSamples)
+                        self?.renderSource?.setAudio(time: currentRender.timebase.cmtime(for: currentPreparePosition), frame: currentRender)
+                    }
                 }
             }
             guard let currentRender else {

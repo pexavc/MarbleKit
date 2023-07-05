@@ -18,8 +18,14 @@ public protocol MarbleMediaPlayback: AnyObject {
     var naturalSize: CGSize { get }
     var currentPlaybackTime: TimeInterval { get }
     func prepareToPlay()
-    func shutdown()
+    func shutdown(restart: Bool)
     func seek(time: TimeInterval, completion: @escaping ((Bool) -> Void))
+}
+
+public extension MarbleMediaPlayback {
+    func shutdown() {
+        self.shutdown(restart: false)
+    }
 }
 
 public protocol MarblePlayerProtocol: MarbleMediaPlayback {

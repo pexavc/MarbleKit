@@ -10,12 +10,12 @@ import AVFoundation
 import AudioToolbox
 import Foundation
 
-class Clip {
+public class Clip {
     static var maxDuration: Double = 5
     
     static var shared: Clip = .init()
     
-    static var childDebug: Bool = false
+    public static var childDebug: Bool = false
     
     //Rendering
     private var operationQueue: OperationQueue = .init()

@@ -80,9 +80,13 @@ open class MarblePlayerOptions {
                                     channelLayout: AVAudioChannelLayout(layoutTag: kAudioChannelLayoutTag_Stereo)!)
     public init() {
         // protocols.texi && http.c for config params
+        // https://fossies.org/linux/ffmpeg/doc/ffmpeg-protocols.texi
         formatContextOptions["auto_convert"] = 0
         formatContextOptions["fps_probe_size"] = 3
         formatContextOptions["reconnect"] = 1
+        //brings seeking capability to live streams.
+        //[-1 - Int.max], -1 for unlimited
+        formatContextOptions["read_ahead_limit"] = 1200
         // Enabling this will prevent playback for pure IPv6 addresses.
         //formatContextOptions["reconnect_at_eof"] = 1
         formatContextOptions["reconnect_streamed"] = 1

@@ -36,6 +36,13 @@ public final class BufferingProgress: NSObject, ObservableObject {
         self.operationQueue.maxConcurrentOperationCount = 1
     }
     
+    func reset() {
+        self.progress = 0
+        self.isDropping = false
+        self.loadState = .idle
+        self.stats = .init(progress: progress, loadState: loadState)
+    }
+    
     func update(loadState: MarbleMediaLoadState) {
         switch loadState {
         case .idle:
