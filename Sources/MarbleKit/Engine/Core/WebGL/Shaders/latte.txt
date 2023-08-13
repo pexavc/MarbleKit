@@ -1,0 +1,41 @@
+precision highp float;
+uniform vec2 u_resolution;
+uniform float u_time;
+uniform vec2 u_position;
+//gl_FragColor, gl_FragCoord
+void main()
+{   
+    float speed = 0.12;
+    float scale = 0.002;
+    vec2 p = (gl_FragCoord.xy/u_resolution.xy- vec2(0.5))*2.0;
+    p.x *= u_resolution.x/u_resolution.y;
+    p *= 0.5;
+    
+    float l = smoothstep(0.0,1.,length(p));
+
+    //p += (1.-l)*(p)/(0.2 + l*1.);
+    
+    p.x += u_time/120.;
+    //vec2 p = gl_FragCoord * scale;   
+    for(int i=1; i<10; i++){
+        p.x+=0.3/float(i)*sin(float(i)*4.*p.y+u_time*speed*1.);//+iMouse.x/1000.;
+        p.y+=0.3/float(i)*cos(float(i)*4.*p.x+u_time*speed*1.);//+iMouse.y/1000.;
+    }
+    //p.xy += u_time*10.;
+        
+    float t = u_time*1.0;
+    float gbOff = p.x;
+    float gOff = 0.0+p.y;
+    float rOff = 0.0;
+    float r=cos(p.x+p.y+1.+rOff)*.5+.5;
+    float g=sin(p.x+p.y+1.+gbOff+gOff)*.5+.5;
+    float b=(sin(p.x+p.y+gbOff)+cos(p.x+p.y+gbOff))*.3+.5;
+    float bo = 0.0;
+    float ro = smoothstep(0.75,0.0,r);
+    //ro = 1.0-step(0.05,r);
+    //ro = 0.;
+    vec3 color = vec3(r*(139./255.)+bo+ro,r*(69./255.)+bo+ro,r*(19./255.)+bo+ro);
+    
+    //vec3 color = vec3(p.x,p.y,0.0);
+    gl_FragColor = vec4(color,1);
+}

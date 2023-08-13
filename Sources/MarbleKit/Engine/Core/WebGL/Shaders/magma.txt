@@ -1,0 +1,26 @@
+precision highp float;
+uniform vec2 u_resolution;
+uniform float u_time;
+uniform vec2 u_position;
+
+const int iterations = 12;
+float firstp = 0.1;
+
+float f(float x, float y, float t, float p) {
+    return cos( x * (x + t) / (y + p) + t );
+}
+
+float iterate(float x, float y, float t) {
+    float p = firstp;
+    for (int i = 0; i < iterations; i++) {
+        p = f(x, y, t, p);
+    }
+    return p;
+}
+
+void main() {
+    float height = sin(u_time) * 0.5 + 1.5;
+    vec2 uv = (gl_FragCoord.xy/u_resolution.xy)*height;
+    float p = iterate(uv.x-height, uv.y-height, cos(u_time));
+    gl_FragColor = vec4(1.0-p,0.0-p,0.0,1.0);
+}

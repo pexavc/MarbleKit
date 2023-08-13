@@ -1,0 +1,35 @@
+precision highp float;
+uniform vec2 u_resolution;
+uniform float u_time;
+uniform vec2 u_position;
+
+vec3 map (vec3 p)
+{
+    for (int i = 0; i < 16; ++i)
+    {
+        p = abs(p/dot(p,p)-vec3(0.64,0.46,0.93));    
+    }	
+    return p/50.;
+}
+
+vec4 raymarch(vec3 ro, vec3 rd)
+{
+    vec3 c = vec3(0,0,0);
+    float t = 0.0;
+    for(int i=0; i<50; ++i)
+    {
+        t+=0.5;
+        c+=map(ro+t*rd);
+    }
+    return vec4(c,1.0);
+}	
+
+void main()
+{
+    vec2 uv = (2.0 * gl_FragCoord.xy-u_resolution.xy) / u_resolution.y;
+    vec3 ro = vec3 (0.0,3.0*cos(u_time * 0.05),6.0) ;
+    vec3 rd = normalize(vec3(uv,2.0)) ;
+    rd = vec3(dot(vec3(1,0,0),rd), dot(vec3(0, cos(u_time * 0.3),sin(u_time * 0.3)),rd), dot(vec3(0,-sin(u_time * 0.3),cos(u_time * 0.3)),rd));
+    rd = vec3(dot(vec3(cos(u_time * 0.1),sin(u_time * 0.1),0),rd), dot(vec3(-sin(u_time * 0.1),cos(u_time * 0.1),0),rd), dot(vec3(0,0,1),rd));
+    gl_FragColor = raymarch(ro,rd);
+}

@@ -1,0 +1,110 @@
+precision highp float;
+uniform vec2 u_resolution;
+uniform float u_time;
+uniform vec2 u_position;
+//gl_FragColor, gl_FragCoord
+/* 
+   I used this tutorial:
+   https://www.youtube.com/watch?v=KGJUl8Teipk
+
+   from Art of Code in order to learn more about Shaders.
+   All rights for the code go to him. Go check him out, he's nice! :)
+*/
+#define S(a, b, t) smoothstep(a, b, t)
+
+float DistLine(vec2 p,vec2 a,vec2 b){
+    vec2 pa = p-a;
+    vec2 ba = b-a;
+    float t = clamp(dot(pa,ba)/dot(ba,ba),0.,1.);
+    return length(pa - ba*t);
+} // function that returns distance to line from a to b.
+
+float Line(vec2 p, vec2 a, vec2 b){
+	float d = DistLine(p,a,b);
+    float m = S(0.03,0.01,d);
+    float d2 = length(a-b);
+    m *= S(1.2,.8,d2)*.3 + S(0.05,0.03,abs(d2 - 0.75));
+    return m;
+} // function that draws a line from a to b.
+
+float N21(vec2 point){
+	point = fract(point * vec2(233.34,851.73));
+    point+= dot(point, point + 23.45);
+    return fract(point.x*point.y);
+} // function that returns a pseudo-random number.
+
+vec2 N22(vec2 p){
+	float n = N21(p);
+    return vec2(n,N21(p+n));
+} // function that returns a vector of 2 pseudo-random numbers.
+
+vec2 GetPos(vec2 id, vec2 offs, float speedMultiplier){
+    return offs + sin(N22(id + offs) * u_time * speedMultiplier) * 0.4;
+} // returns position of point in it's grid.
+
+float Layer(vec2 uv){
+    float m = 0.;
+	vec2 gv = fract(uv) - 0.5;
+    vec2 id = floor(uv);
+    
+    float speedMultiplier = 0.7;
+    vec2 p[9];
+    int i = 0;
+    p[0] = GetPos(id,vec2(-1,-1), speedMultiplier);
+    p[1] = GetPos(id,vec2(-1,0), speedMultiplier);
+    p[2] = GetPos(id,vec2(-1,1), speedMultiplier);
+    p[3] = GetPos(id,vec2(0,-1), speedMultiplier);
+    p[4] = GetPos(id,vec2(0,0), speedMultiplier);
+    p[5] = GetPos(id,vec2(0,1), speedMultiplier);
+    p[6] = GetPos(id,vec2(1,-1), speedMultiplier);
+    p[7] = GetPos(id,vec2(1,0), speedMultiplier);
+    p[8] = GetPos(id,vec2(1,1), speedMultiplier);
+    
+    for(int i=0;i<9;i++){
+    	m += Line(gv, p[4],p[i]);
+        
+        vec2 j = (p[i] - gv) *20.;
+        float sparkle = 1./dot(j,j);
+        m+= sparkle*(sin((u_time+fract(p[i].x))*10.)*.5+.5);
+    }
+    
+    m += Line(gv,p[1],p[3]);
+    m += Line(gv,p[1],p[5]);
+    m += Line(gv,p[3],p[7]);
+    m += Line(gv,p[5],p[7]);
+    
+    return m;
+} // function that returns a layer.
+
+void main()
+{
+    
+    vec2 uv = (gl_FragCoord.xy-.5*u_resolution.xy)/u_resolution.y;
+    vec2 mouse = (vec2(0.0, 0.0)/u_resolution.xy) - .5;
+    
+    float gradient = uv.y;
+    float m = 0.;
+    float t = u_time * .1;
+    
+    // rotation
+    float s = sin(t);
+    float c = cos(t);
+    mat2 rot = mat2(c,-s,s,c);
+    uv *= rot;
+    mouse *= rot;
+    
+    // drawing each layer, we have X layers and we iterrate the for with 1/X
+    for(float i=0.;i<1.;i+=1./4.){
+    	float z = fract(i+t);
+        float size = mix(10.,.5,z);
+        float fade = S(0.,0.4,z) * S(1.,.7,z);
+        m += Layer(uv*size + i*20. - mouse) * fade;
+    }
+    
+    vec3 base = sin(t*10.*vec3(.245,.845,.567))*.4 +.6;
+    vec3 col = m*base;
+    col -= gradient*base;
+    
+    
+    gl_FragColor = vec4(col,1.0);
+}

@@ -229,7 +229,7 @@ public enum LogLevel: Int32, CustomStringConvertible {
 @inline(__always) public func MarblePlayerLog(_ message: CustomStringConvertible, logLevel: LogLevel = .warning, file: String = #file, function: String = #function, line: Int = #line) {
     if logLevel.rawValue <= MarblePlayerOptions.logLevel.rawValue {
         let fileName = (file as NSString).lastPathComponent
-        print("logLevel: \(logLevel) MarblePlayer: \(fileName):\(line) \(function) | \(message)")
+        print("[Marble] | \(logLevel) | MarblePlayer: \(fileName):\(line) \(function) | \(message)")
     }
 }
 

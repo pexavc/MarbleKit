@@ -1,0 +1,31 @@
+precision highp float;
+uniform vec2 u_resolution;
+uniform float u_time;
+uniform vec2 u_position;
+                
+void main(){
+    vec2 st = (gl_FragCoord.xy * 2. - u_resolution.xy) / min(u_resolution.x, u_resolution.y);
+    
+    st *= 2.5;
+
+    vec2 coord = st;
+    float len;
+    
+    len = length(coord);
+    coord.x +=  sin(coord.y + u_time * 0.3)*1.;
+    coord.y +=  cos(coord.x + u_time * 0.1 + cos(len * 1.0))*6.;
+    
+    len = length(coord);
+    coord.x +=  sin(coord.y + u_time * 0.3)*1.;
+    coord.y +=  cos(coord.x + u_time * 0.1 + cos(len * 1.0))*6.;
+    
+    len = length(coord);
+    coord.x +=  sin(coord.y + u_time * 0.3)*1.;
+    coord.y +=  cos(coord.x + u_time * 0.1 + cos(len * 1.0))*6.;
+         
+    vec3 col = vec3(0.);
+
+    col = mix(col, vec3(cos(len)), 1.0);
+    
+    gl_FragColor = vec4(0.7*col,1.);      
+}

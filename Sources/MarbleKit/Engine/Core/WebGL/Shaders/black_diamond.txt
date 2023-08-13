@@ -1,0 +1,59 @@
+precision highp float;
+uniform vec2 u_resolution;
+uniform float u_time;
+uniform vec2 u_position;
+
+#define PI 3.1415926535897932384626433832795
+
+float saw(float x) {
+    return mod(x, 2.0) * 0.5;
+}
+
+float tri(float x) {
+    return 1.0 - abs( mod(x, 2.0) - 1.0 );
+}
+
+float cosPos(float x) {
+	return cos(x) * 0.5 + 0.5;
+}
+
+float signGte0(float x) {
+    return step(0.0, x)*2.0 - 1.0;
+}
+    
+vec3 invert(vec3 col, float mask) {
+    mask = signGte0(mask);
+	// change col from 0 <-> 1 to -1 <-> 1
+    col = col * 2.0 - 1.0;
+	return (col * mask)*0.5 + 0.5;
+}
+
+void main() {
+	float time = u_time;
+	vec2 q = gl_FragCoord.xy/u_resolution.xy;
+	vec2 p = q * 2.0 - 1.0;
+	p.x *= u_resolution.x/u_resolution.y;
+
+	// stripes
+	float width = 0.20; // how wide is each pair (wavelength)
+	float balance = 0.90; // 0.5 == 50/50 black and white
+    float offset = -0.20;
+
+	float stripe = sin((p.y + offset)*2.0*PI/width) * 0.5 + balance;
+	stripe = smoothstep(0.50, 0.51, stripe);
+	vec3 col = vec3(stripe);
+
+	// mask
+    float radius = 3.0 * saw(time);
+    float radius2 = 3.0 * saw(time - 1.0);
+    
+    float mask = (abs(p.x)+abs(p.y)) - radius;
+    float mask2 = (abs(p.x)+abs(p.y)) - radius2;
+
+    col = invert(col, mask);
+    col = invert(col, mask2);
+    //col = invert(col, -sin(time*PI)); //lol
+    col = invert(col, saw(time) - 0.5); //lol
+    
+	gl_FragColor = vec4(col, 1.0);
+}

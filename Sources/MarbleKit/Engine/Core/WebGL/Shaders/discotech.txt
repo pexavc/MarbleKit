@@ -1,0 +1,33 @@
+precision highp float;
+uniform vec2 u_resolution;
+uniform float u_time;
+uniform vec2 u_position;
+#define factor 74
+
+float Circle(vec2 uv, float r, float lw, float blur)
+{
+    float d = length(uv);
+    return smoothstep(r + lw + .005 + blur, r + lw, d) - 
+           smoothstep(r - lw, r - lw - .005 - blur, d);
+}
+
+void main()
+{
+    vec2 uv = (gl_FragCoord.xy - .5 * u_resolution.xy) / u_resolution.y;
+
+    vec3 color = vec3(0.);
+    
+    float sx = sin(uv.x / .002);// + time * 5.);
+    float sy = sin(uv.y / .003 + u_time * 5.);
+    color += sx * .3 + sy * .3;
+    
+    color -= vec3(sqrt(uv * uv), 0.);
+    
+    float s = sin(length(vec2(uv.y, uv.x))/.01-u_time)*.25;
+    s -= sin(distance(uv.x * uv.y, (1. - (uv.x * uv.y)))/.025-u_time)*.25;
+    color *= Circle(uv, s, .1, .0);
+    
+    color /= Circle(uv, .4, .002, 0.);
+
+    gl_FragColor = vec4(color,1.0);
+}

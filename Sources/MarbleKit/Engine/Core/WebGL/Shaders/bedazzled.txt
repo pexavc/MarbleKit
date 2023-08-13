@@ -1,0 +1,31 @@
+precision highp float;
+uniform vec2 u_resolution;
+uniform float u_time;
+uniform vec2 u_position;
+
+#define ITERS 9
+const float scale = 2.1;
+const float scale1 = 1.12;
+
+void main()
+{
+    gl_FragColor = vec4(0.0);
+    vec3 col=vec3(0.0),col_prev=vec3(0.0);
+    vec2 uv = (gl_FragCoord.xy*10.0-u_resolution.xy)/u_resolution.y/15.0;
+    float s1 = (uv.y+u_time/2.)/9.0;
+    for(int c=0;c<ITERS;c++){
+        col_prev = col;
+        for(int i=0;i<ITERS;i++)
+        {
+            uv= (-uv-vec2(uv.x/scale+uv.y/scale1,uv.y/scale+uv.x/scale1)/scale)/scale1;
+            uv.x *= -scale1;
+            uv = fract(uv.yx-s1);
+            uv.y /= scale1;
+        }
+        col[2] = abs(uv.y-uv.x);
+        col = ((col+col_prev.yzx))/1.6;
+	}
+    gl_FragColor = vec4(vec3(col),1.0);
+    
+}
+     

@@ -1,0 +1,58 @@
+precision highp float;
+                uniform vec2 u_resolution;
+                uniform float u_time;
+                uniform vec2 u_position;
+                #define factor 74
+
+                
+                const float pi = 3.1415926535897932;
+
+float atanM(float y, float x){
+    if(x >= 0.){
+        return atan(y/x)/pi/2.+.75;
+    }
+    return (pi+2.*atan(y/x))/4./pi;
+}
+
+void main()
+{
+ 
+    int amount = 2;
+    float width = 2.5;
+    float speed = 0.05;
+    float speed2 = 0.075;
+    float speed3 = 0.10;
+    vec3 color1 = vec3(2.0, 2.6, 2.9);
+    vec3 color2 = vec3(-0.1, 0.0, 0.1);
+    vec3 color12 = vec3(1.0, 2.5, 2.0);
+    vec3 color22 = vec3(-0.11, 0.11, 0.11);
+    vec3 color13 = vec3(2.3, 2.9, 2.0);
+    vec3 color23 = vec3(-0.01, 0.01, 0.01);
+    
+
+    vec2 R = u_resolution.xy;
+    vec2 uv = gl_FragCoord.xy-R/2.;
+    vec3 col;
+    vec3 col2;
+    vec3 col3;
+    float d = length(uv);
+    float d2 = length(uv)/50.;
+    float d3 = length(uv)/80.0;
+    d -= u_time*speed;
+    d2 -= u_time*speed2;
+    d3 -= u_time*speed3;
+
+    float mascara = smoothstep(R.y/2.+width*2., R.y/2.-width*2., (length(uv)));
+    float mascara2 = smoothstep(R.y/2.+width*2., R.y/2.-width*2., tan(tan(length(uv.x*30.) + length(uv.y/-30.))));
+    
+    col = vec3(tan(tan(2.*pi*atanM(uv.y, uv.x)+d*width)*float(amount))+1.)/2.;
+    col2 = vec3(cos(tan(4.*pi*atanM(uv.y, uv.x)+d2*width)*float(amount))+1.)/2.;
+    col3 = vec3(cos(tan(2.*pi*atanM(uv.y, uv.x)+d3*width)*float(amount))+1.)/2.;
+    col = color1+col2*(color2-color1);
+    col *= mascara;
+    col2 = color23+col3*(color13-color22);
+    col2 *= mascara2;
+    col3 = color22+col2*(color12-color23);
+    col3 *= mascara2;
+    gl_FragColor = vec4(col-col2-col3,1.0);
+}
