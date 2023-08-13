@@ -10,7 +10,7 @@ import Foundation
 public class MarbleWebGLCatalog {
     static public var shared: MarbleWebGLCatalog = .init()
     
-    public enum FX: String {
+    public enum FX: String, Equatable, Hashable, CaseIterable, Identifiable {
         case amsterdam
         case andromeda
         case aura
@@ -35,6 +35,13 @@ public class MarbleWebGLCatalog {
         case voronoise
         case waves
         case granite
+        
+        public var id: String {
+            self.rawValue
+        }
+        public func hash(into hasher: inout Hasher) {
+            hasher.combine(id)
+        }
     }
     
     public func load(_ fx: FX) -> String? {
