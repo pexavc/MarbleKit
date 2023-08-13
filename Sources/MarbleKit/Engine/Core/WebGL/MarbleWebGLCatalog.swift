@@ -44,7 +44,7 @@ public class MarbleWebGLCatalog {
         }
     }
     
-    public func load(_ fx: FX) -> String? {
+    public func load(_ fx: FX, speed: Double = 1.0) -> String? {
         guard let path = Bundle.module.path(forResource: fx.rawValue, ofType: "txt") else {
             MarbleLog("failed to get webGL shader", logLevel: .error)
             return nil
@@ -54,6 +54,6 @@ public class MarbleWebGLCatalog {
         if file == nil {
             MarbleLog("no file: \(path)", logLevel: .error)
         }
-        return file
+        return file?.replacingOccurrences(of: "$MarbleSpeed$", with: "\(speed)")
     }
 }

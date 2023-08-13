@@ -153,7 +153,7 @@ float fbmabs( vec2 p ) {
     for(int i = 0;i<6;i++){	
 		r += abs(noise( p*f ))/f;       
 	    f *=2.2;
-        p+=vec2(-.01,.07)*r+.2*m*u_time/(.1-f);
+        p+=vec2(-.01,.07)*r+((.2*m*u_time)*$MarbleSpeed$)/(.1-f);
 	}
 	return r;
 }
@@ -166,7 +166,7 @@ float fbm( vec2 p ) {
     for(int i = 0;i<8;i++){	
 		r += noise( p*f )/f;       
 	    f *=2.;
-        p+=vec2(.01,-.05)*r+.2*m*u_time/(.1-f);
+        p+=vec2(.01,-.05)*r+((.2*m*u_time)*$MarbleSpeed$)/(.1-f);
 	}
 	return r;
 }
@@ -204,7 +204,7 @@ void main() {
     
       
     //if(iMouse.z>0.)m = 2.*vec2(0.5)/u_resolution.xy-1.;//vec2 is imouse
-   	p += .2*m*u_time;
+   	p += ((.2*m*u_time)*$MarbleSpeed$);
     vec3 light = normalize(vec3(3., 2., -1.));
 	float r;
     r = max(dot(nor(p), light),0.25);

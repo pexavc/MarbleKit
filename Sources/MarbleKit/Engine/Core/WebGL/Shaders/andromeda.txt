@@ -38,9 +38,9 @@ void main()
     float d = length(uv);
     float d2 = length(uv)/50.;
     float d3 = length(uv)/80.0;
-    d -= u_time*speed;
-    d2 -= u_time*speed2;
-    d3 -= u_time*speed3;
+    d -= u_time*speed * $MarbleSpeed$;
+    d2 -= u_time*speed2 * $MarbleSpeed$;
+    d3 -= u_time*speed3 * $MarbleSpeed$;
 
     float mascara = smoothstep(R.y/2.+width*2., R.y/2.-width*2., (length(uv)));
     float mascara2 = smoothstep(R.y/2.+width*2., R.y/2.-width*2., tan(tan(length(uv.x*30.) + length(uv.y/-30.))));

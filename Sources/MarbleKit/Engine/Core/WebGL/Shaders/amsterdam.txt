@@ -50,7 +50,7 @@ vec3 hsv2rgb(vec3 c)
 void main() {
   vec2 p = gl_FragCoord.xy / u_resolution.xy;
   ltime = u_time;
-  float ctime = u_time + fbm(p/8.)*40.;
+  float ctime = (u_time + fbm(p/8.)*40.) * $MarbleSpeed$;
   float ftime = fract(ctime/6.);
   ltime = floor(ctime/6.) + (1.-cos(ftime*3.1415)/2.);
   ltime = ltime*6.;
