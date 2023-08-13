@@ -1,5 +1,5 @@
 //
-//  File.swift
+//  MarbleWebGLCatalog.swift
 //  
 //
 //  Created by PEXAVC on 8/13/23.
@@ -10,7 +10,7 @@ import Foundation
 public class MarbleWebGLCatalog {
     static public var shared: MarbleWebGLCatalog = .init()
     
-    public enum FX: String, Equatable, Hashable, CaseIterable, Identifiable {
+    public enum FX: String, Equatable, Hashable, CaseIterable, Identifiable, Codable {
         case amsterdam
         case andromeda
         case aura
