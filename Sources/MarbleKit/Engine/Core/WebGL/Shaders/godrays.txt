@@ -8,7 +8,7 @@ uniform vec2 u_position;
 //https://www.shadertoy.com/view/4sfGRn by Inigo Quilez
 //https://www.shadertoy.com/view/ld2fRt by Przemyslaw Zaworski
 
-#define factor 74
+#define factor 48
 
 float hash (vec3 n) 
 { 
@@ -70,7 +70,7 @@ void main()
     vec2  d = (vec2(0.0,0.0)-p)/float(factor);
     float w = 1.0;
     vec2  s = p;
-    float timeSlow = u_time * 0.06;
+    float timeSlow = u_time * 0.06 * $MarbleSpeed$;
     for( int i=0; i<factor; i++ )
     {
         vec3 res = surface(vec2(s.x+timeSlow,s.y)+sin(timeSlow));

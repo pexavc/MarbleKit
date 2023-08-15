@@ -4,7 +4,7 @@ uniform float u_time;
 uniform vec2 u_position;
                 
 const float cloudscale = 2.1;
-const float speed = .20;
+const float speed = $MarbleSpeed$;
 const float clouddark = 0.5;
 const float cloudlight = 0.9;
 const float cloudcover = 0.7;

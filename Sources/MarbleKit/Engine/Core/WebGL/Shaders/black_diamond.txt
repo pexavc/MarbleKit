@@ -29,7 +29,7 @@ vec3 invert(vec3 col, float mask) {
 }
 
 void main() {
-	float time = u_time;
+	float time = u_time*$MarbleSpeed$;
 	vec2 q = gl_FragCoord.xy/u_resolution.xy;
 	vec2 p = q * 2.0 - 1.0;
 	p.x *= u_resolution.x/u_resolution.y;
