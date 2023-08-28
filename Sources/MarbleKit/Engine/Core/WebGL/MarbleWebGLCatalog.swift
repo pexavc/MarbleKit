@@ -34,6 +34,7 @@ public class MarbleWebGLCatalog {
         case vinyl
         case voronoise
         case waves
+        case warp
         case granite
         
         public var id: String {
