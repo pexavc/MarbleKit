@@ -66,6 +66,8 @@ extension MarbleEngine {
             texture = catalog.stars(context: context, threshold: sinf(value), sliderValue: sliderValue)(texture)
         case .bokeh(let value, let sliderValue):
             texture = catalog.bokeh(context: context, threshold: value*sliderValue)(texture)
+        case .blur(let value, let sliderValue):
+            texture = catalog.blur(context: context, threshold: value*sliderValue)(texture)
         case .godRay(let threshold, let value):
             texture = catalog.godRay(context: context, threshold: threshold)(texture)
         default:

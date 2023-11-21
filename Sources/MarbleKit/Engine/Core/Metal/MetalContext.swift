@@ -88,6 +88,7 @@ public class MetalContext {
             fileprivate(set) var ink : InkKernel!
             fileprivate(set) var vibes : VibesKernel!
             fileprivate(set) var bokeh : BokehKernel!
+            fileprivate(set) var blur : BlurKernel!
             fileprivate(set) public var depth : DepthKernel!
             fileprivate(set) var backdrop : BackdropKernel!
             fileprivate(set) var skinDecolor : SkinDecolorKernel!
@@ -104,6 +105,7 @@ public class MetalContext {
                 ink = InkKernel(context: context)
                 vibes = VibesKernel(context: context)
                 bokeh = BokehKernel(context: context)
+                blur = BlurKernel(context: context)
                 depth = DepthKernel(context: context)
                 backdrop = BackdropKernel(context: context)
                 skinDecolor = SkinDecolorKernel(context: context)

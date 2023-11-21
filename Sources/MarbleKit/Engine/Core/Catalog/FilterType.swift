@@ -24,6 +24,7 @@ public enum EffectType {
     case vibes(Float, Float)
     case depth(Float)
     case bokeh(Float, Float)
+    case blur(Float, Float)
     case backdrop(Float)
     case scale(Float)
     case skin(Float, Float)
@@ -57,6 +58,7 @@ public enum MarbleEffect: String, Equatable, Codable, CaseIterable, Identifiable
     case vibes
     case depth
     case bokeh
+    case blur
     case godRay
     case polka
     case stars
@@ -79,6 +81,8 @@ public enum MarbleEffect: String, Equatable, Codable, CaseIterable, Identifiable
             return .depth(threshold)
         case .bokeh:
             return .bokeh(sample, threshold)
+        case .blur:
+            return .blur(sample, threshold)
         case .godRay:
             return .godRay(sample, threshold)
         case .polka:
@@ -103,6 +107,7 @@ public enum MarbleEffect: String, Equatable, Codable, CaseIterable, Identifiable
             .ink,
             .vibes,
             .bokeh,
+            .blur,
             .godRay,
             .polka
         ]
